@@ -39,3 +39,9 @@ export type WorkerInputMessage =
 
 // Messages sent from worker to main thread
 export type WorkerResponseMessage = WorkerOutputMessage | WorkerStatusMessage;
+
+// Chat message type for AI chat functionality
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}

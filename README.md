@@ -2,6 +2,7 @@
 
 - do not ask user to run dev server, assume it's already running
 - after completion of every user-story, update this file, include implemted story in 'implemented stories' section, explain what was done
+- use react-icons for all icons
 
 # Docs
 
@@ -69,3 +70,16 @@
   - **Accessibility features** proper aria-labels, keyboard focus styles, and screen reader support
   - **Icon consistency** all icons from react-icons (FaPlay, FaStop, FaCircle, FaCheckCircle, FaTimesCircle, FaSpinner)
   - **State-based styling** different colors for each execution state (gray=new, blue=running, green=complete, red=failed, orange=cancelled)
+
+- 0006.AI_CHAT.md – Inline AI chat assistant added above each code cell. Highlights:
+
+  - **ChatInterface component** with scrollable history panel and responsive design
+  - **Keyboard behavior**: Enter sends, Shift/Ctrl/⌘ + Enter inserts newline
+  - **Streaming replies** via Vercel AI SDK (`createGoogleGenerativeAI` + `streamText`) calling `gemini-2.5-flash`
+  - **System prompt constant** stored in `prompts/system-prompt.ts` (no runtime file I/O)
+  - **Conversation state** preserved on client and included with every request
+  - **Visual differentiation** between user and assistant messages using Tailwind and react-icons
+  - **Loading indicator** shows spinner while the assistant is thinking
+  - **Integration** Chat panel rendered above each `CodeCell` without affecting execution engine
+  - **Error handling** for missing API key, rate limits, or SDK failures with safe JSON responses
+  - **Mobile-friendly** layout and accessibility considerations remain intact

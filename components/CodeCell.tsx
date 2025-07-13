@@ -12,6 +12,7 @@ import {
   FaTimesCircle,
   FaSpinner,
 } from "react-icons/fa";
+import ChatInterface from "./ChatInterface";
 
 export enum ExecutionState {
   NEW = "new",
@@ -141,17 +142,22 @@ export default function CodeCell({
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden">
-      {/* Header with comment and controls */}
-      <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
-          {/* Status Button */}
-          <button
-            onClick={handleStatusClick}
-            onMouseEnter={() => setIsStatusHovered(true)}
-            onMouseLeave={() => setIsStatusHovered(false)}
-            disabled={!canRun && !canStop}
-            className={`
+    <div className="space-y-4">
+      {/* Chat Interface */}
+      <ChatInterface />
+
+      {/* Code Cell */}
+      <div className="border rounded-lg overflow-hidden">
+        {/* Header with comment and controls */}
+        <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            {/* Status Button */}
+            <button
+              onClick={handleStatusClick}
+              onMouseEnter={() => setIsStatusHovered(true)}
+              onMouseLeave={() => setIsStatusHovered(false)}
+              disabled={!canRun && !canStop}
+              className={`
               flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium
               transition-all duration-200 min-w-0
               ${statusConfig.bgColor} ${statusConfig.color}
@@ -162,63 +168,64 @@ export default function CodeCell({
               }
               ${!canRun && !canStop ? "opacity-50" : ""}
             `}
-            aria-label={`${statusConfig.hoverText} code cell`}
-          >
-            {statusConfig.showPlayIcon && canRun ? (
-              <FaPlay className="w-3 h-3" />
-            ) : statusConfig.showStopIcon && canStop ? (
-              <FaStop className="w-3 h-3" />
-            ) : (
-              statusConfig.icon
-            )}
-            <span className="truncate">{statusConfig.hoverText}</span>
-          </button>
+              aria-label={`${statusConfig.hoverText} code cell`}
+            >
+              {statusConfig.showPlayIcon && canRun ? (
+                <FaPlay className="w-3 h-3" />
+              ) : statusConfig.showStopIcon && canStop ? (
+                <FaStop className="w-3 h-3" />
+              ) : (
+                statusConfig.icon
+              )}
+              <span className="truncate">{statusConfig.hoverText}</span>
+            </button>
 
-          {/* Top-level comment */}
-          <div className="text-gray-700 text-sm truncate flex-1">
-            {topLevelComment}
+            {/* Top-level comment */}
+            <div className="text-gray-700 text-sm truncate flex-1">
+              {topLevelComment}
+            </div>
           </div>
+
+          {/* Toggle Button */}
+          <button
+            onClick={toggleCodeVisibility}
+            className="ml-3 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-md transition-colors"
+            aria-label={`${isCodeVisible ? "Hide" : "Show"} code editor`}
+          >
+            {isCodeVisible ? (
+              <FaRegEyeSlash className="w-4 h-4" />
+            ) : (
+              <FaRegEye className="w-4 h-4" />
+            )}
+          </button>
         </div>
 
-        {/* Toggle Button */}
-        <button
-          onClick={toggleCodeVisibility}
-          className="ml-3 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-md transition-colors"
-          aria-label={`${isCodeVisible ? "Hide" : "Show"} code editor`}
-        >
-          {isCodeVisible ? (
-            <FaRegEyeSlash className="w-4 h-4" />
-          ) : (
-            <FaRegEye className="w-4 h-4" />
-          )}
-        </button>
-      </div>
-
-      {/* Code Editor (collapsible) */}
-      <div
-        className={`
+        {/* Code Editor (collapsible) */}
+        <div
+          className={`
         transition-all duration-300 ease-in-out overflow-hidden
         ${isCodeVisible ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}
       `}
-      >
-        <div className="h-64">
-          <Editor
-            height="100%"
-            defaultLanguage="python"
-            value={code}
-            onChange={handleEditorChange}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              lineNumbers: "on",
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 4,
-              insertSpaces: true,
-              readOnly: disabled,
-            }}
-          />
+        >
+          <div className="h-64">
+            <Editor
+              height="100%"
+              defaultLanguage="python"
+              value={code}
+              onChange={handleEditorChange}
+              theme="vs-dark"
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                lineNumbers: "on",
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 4,
+                insertSpaces: true,
+                readOnly: disabled,
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>
