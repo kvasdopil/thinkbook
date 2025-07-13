@@ -7,6 +7,13 @@
 
 - User stories are located in /docs/user-stories
 
+# Directory structure
+
+- /app - nextjs routes
+- /components - react components
+- /utils - reusable utility code
+- /hooks - react hooks
+
 # Implemented user-stories
 
 - 0001.APP.md – Initial "hello world" single-page application implemented. Highlights:

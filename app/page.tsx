@@ -2,61 +2,100 @@
 
 import { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
+import type { WorkerResponseMessage } from "../types/worker-messages";
 
-interface PyodideWorkerMessage {
-  type: string;
-  stdout?: string;
-  stderr?: string;
-  message?: string;
-  id?: string;
+interface OutputLine {
+  type: "out" | "err" | "system";
+  value: string;
+  timestamp: number;
 }
 
 export default function Home() {
   const [code, setCode] = useState(
-    'print("Hello, World!")\nprint("Ready to run Python code!")'
+    `import time
+
+for i in range(5):
+    time.sleep(1)
+    print(f"Hello {i}")
+    
+print("All done!")`
   );
-  const [output, setOutput] = useState("");
+  const [output, setOutput] = useState<OutputLine[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const workerRef = useRef<Worker | null>(null);
   const executionIdRef = useRef(0);
+  const outputRef = useRef<HTMLPreElement>(null);
+
+  // Auto-scroll to bottom if user is already at bottom
+  const scrollToBottomIfAtBottom = () => {
+    if (outputRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = outputRef.current;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
+
+      if (isAtBottom) {
+        outputRef.current.scrollTop = scrollHeight;
+      }
+    }
+  };
+
+  // Add a new output line
+  const addOutputLine = (type: "out" | "err" | "system", value: string) => {
+    setOutput((prev) => [
+      ...prev,
+      {
+        type,
+        value,
+        timestamp: Date.now(),
+      },
+    ]);
+
+    // Auto-scroll after state update
+    setTimeout(scrollToBottomIfAtBottom, 0);
+  };
 
   // Initialize the web worker
   useEffect(() => {
     const worker = new Worker(new URL("./pyodide-worker.ts", import.meta.url));
     workerRef.current = worker;
 
-    worker.onmessage = (event: MessageEvent<PyodideWorkerMessage>) => {
-      const { type, stdout, stderr, message } = event.data;
+    worker.onmessage = (event: MessageEvent<WorkerResponseMessage>) => {
+      const message = event.data;
 
-      switch (type) {
+      switch (message.type) {
         case "init-complete":
           setIsInitialized(true);
-          setOutput(
+          addOutputLine(
+            "system",
             "Pyodide initialized successfully. Ready to run Python code!"
           );
           break;
-        case "result":
+        case "out":
+          if (message.value) {
+            addOutputLine("out", message.value);
+          }
+          break;
+        case "err":
+          if (message.value) {
+            addOutputLine("err", message.value);
+          }
+          break;
+        case "execution-complete":
           setIsRunning(false);
-          const outputText = [];
-          if (stdout) outputText.push(stdout);
-          if (stderr) outputText.push(`Error: ${stderr}`);
-          setOutput(
-            outputText.join("\n") || "Code executed successfully (no output)"
-          );
+          addOutputLine("system", "Execution completed.");
           break;
         case "error":
           setIsRunning(false);
-          setOutput(`Error: ${message}`);
+          addOutputLine("err", `Error: ${message.message || "Unknown error"}`);
           break;
         default:
-          console.warn("Unknown message type:", type);
+          console.warn("Unknown message type:", message);
       }
     };
 
     worker.onerror = (error) => {
       console.error("Worker error:", error);
-      setOutput(`Worker error: ${error.message}`);
+      addOutputLine("err", `Worker error: ${error.message}`);
       setIsRunning(false);
     };
 
@@ -74,7 +113,7 @@ export default function Home() {
     }
 
     setIsRunning(true);
-    setOutput("Running...");
+    addOutputLine("system", "Running...");
 
     const executionId = `exec_${executionIdRef.current++}`;
     workerRef.current.postMessage({
@@ -86,6 +125,35 @@ export default function Home() {
 
   const handleEditorChange = (value: string | undefined) => {
     setCode(value || "");
+  };
+
+  const clearOutput = () => {
+    setOutput([]);
+  };
+
+  const formatOutput = (lines: OutputLine[]) => {
+    return lines.map((line, index) => {
+      let className = "";
+      switch (line.type) {
+        case "out":
+          className = "text-green-400";
+          break;
+        case "err":
+          className = "text-red-400";
+          break;
+        case "system":
+          className = "text-blue-400";
+          break;
+        default:
+          className = "text-green-400";
+      }
+
+      return (
+        <span key={index} className={className}>
+          {line.value}
+        </span>
+      );
+    });
   };
 
   return (
@@ -118,8 +186,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Run Button */}
-        <div className="flex justify-center">
+        {/* Control Buttons */}
+        <div className="flex justify-center gap-4">
           <button
             onClick={handleRunCode}
             disabled={!isInitialized || isRunning}
@@ -131,6 +199,12 @@ export default function Home() {
           >
             {isRunning ? "Running..." : "Run Code"}
           </button>
+          <button
+            onClick={clearOutput}
+            className="px-6 py-3 rounded-lg font-semibold text-white bg-gray-600 hover:bg-gray-700 active:bg-gray-800 transition-colors"
+          >
+            Clear Output
+          </button>
         </div>
 
         {/* Output Section */}
@@ -139,11 +213,15 @@ export default function Home() {
             <h2 className="text-lg font-semibold">Output</h2>
           </div>
           <div className="p-4">
-            <pre className="bg-black text-green-400 p-4 rounded font-mono text-sm overflow-auto max-h-64">
-              {output ||
-                (isInitialized
-                  ? "No output yet. Run some Python code!"
-                  : "Initializing Pyodide...")}
+            <pre
+              ref={outputRef}
+              className="bg-black text-green-400 p-4 rounded font-mono text-sm overflow-auto max-h-64 whitespace-pre-wrap"
+            >
+              {output.length > 0
+                ? formatOutput(output)
+                : isInitialized
+                ? "No output yet. Run some Python code!"
+                : "Initializing Pyodide..."}
             </pre>
           </div>
         </div>

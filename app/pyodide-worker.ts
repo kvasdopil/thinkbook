@@ -1,5 +1,11 @@
 // pyodide-worker.ts
 /// <reference lib="webworker" />
+
+import type {
+  WorkerInputMessage,
+  WorkerResponseMessage,
+} from "../types/worker-messages";
+
 const ctx: DedicatedWorkerGlobalScope =
   self as unknown as DedicatedWorkerGlobalScope;
 
@@ -14,19 +20,6 @@ interface PyodideInterface {
 }
 
 let pyodide: PyodideInterface | null = null;
-
-// Message types
-interface ExecuteMessage {
-  type: "execute";
-  code: string;
-  id: string;
-}
-
-interface InitMessage {
-  type: "init";
-}
-
-type WorkerMessage = ExecuteMessage | InitMessage;
 
 // Load Pyodide
 async function loadPyodideWorker(): Promise<PyodideInterface> {
@@ -57,7 +50,7 @@ async function initializePyodide() {
   }
 }
 
-// Execute Python code
+// Execute Python code with streaming output
 async function executePython(code: string, id: string) {
   if (!pyodide) {
     ctx.postMessage({
@@ -69,34 +62,76 @@ async function executePython(code: string, id: string) {
   }
 
   try {
-    // Set up Python stdout/stderr capture (only once, reuse buffers)
+    // Set up JavaScript callback for streaming output
+    pyodide.globals.set("send_output", (output_type: string, text: string) => {
+      ctx.postMessage({
+        type: output_type,
+        value: text,
+        id,
+      } as WorkerResponseMessage);
+    });
+
+    // Set up streaming output capture by redefining print
     pyodide.runPython(`
 import sys
-import io
-from contextlib import redirect_stdout, redirect_stderr
+import builtins
 
-# Create string buffers for stdout and stderr
-stdout_buffer = io.StringIO()
-stderr_buffer = io.StringIO()
+# Save original print function
+original_print = builtins.print
+
+def streaming_print(*args, **kwargs):
+    # Convert print arguments to string like normal print
+    import io
+    buffer = io.StringIO()
+    
+    # Extract file parameter to avoid conflict
+    kwargs_copy = kwargs.copy()
+    kwargs_copy['file'] = buffer
+    
+    original_print(*args, **kwargs_copy)
+    output = buffer.getvalue()
+    
+    # Send output to main thread
+    send_output("out", output)
+
+# Replace print with streaming version
+builtins.print = streaming_print
+
+# Set up stderr capture
+class StderrCapture:
+    def write(self, text):
+        if text.strip():
+            send_output("err", text)
+        return len(text)
+    
+    def flush(self):
+        pass
+
+# Replace stderr
+original_stderr = sys.stderr
+sys.stderr = StderrCapture()
 `);
 
     // Store the user code in pyodide globals to avoid template literal issues
     pyodide.globals.set("user_code", code);
 
-    // Execute the user code with output capture
+    // Execute the user code
     pyodide.runPython(`
-with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+try:
     exec(user_code, globals())
+except Exception as e:
+    import traceback
+    error_msg = traceback.format_exc()
+    send_output("err", error_msg)
+finally:
+    # Restore original functions
+    builtins.print = original_print
+    sys.stderr = original_stderr
 `);
 
-    // Get captured output
-    const stdoutOutput = pyodide.runPython("stdout_buffer.getvalue()");
-    const stderrOutput = pyodide.runPython("stderr_buffer.getvalue()");
-
+    // Send completion message
     ctx.postMessage({
-      type: "result",
-      stdout: stdoutOutput,
-      stderr: stderrOutput,
+      type: "execution-complete",
       id,
     });
   } catch (error) {
@@ -109,8 +144,8 @@ with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
 }
 
 // Handle messages from main thread
-ctx.onmessage = async (event: MessageEvent<WorkerMessage>) => {
-  const message: WorkerMessage = event.data;
+ctx.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
+  const message: WorkerInputMessage = event.data;
   console.log("message", message);
   switch (message.type) {
     case "init":
