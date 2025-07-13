@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Editor from "@monaco-editor/react";
+import CodeCell, { ExecutionState } from "../components/CodeCell";
 import type { WorkerResponseMessage } from "../types/worker-messages";
 
 interface OutputLine {
@@ -12,7 +12,8 @@ interface OutputLine {
 
 export default function Home() {
   const [code, setCode] = useState(
-    `import time
+    `# Demo script with streaming output
+import time
 
 for i in range(5):
     time.sleep(1)
@@ -21,8 +22,9 @@ for i in range(5):
 print("All done!")`
   );
   const [output, setOutput] = useState<OutputLine[]>([]);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isStopping, setIsStopping] = useState(false);
+  const [executionState, setExecutionState] = useState<ExecutionState>(
+    ExecutionState.NEW
+  );
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentExecutionId, setCurrentExecutionId] = useState<string | null>(
     null
@@ -90,6 +92,7 @@ print("All done!")`
       switch (message.type) {
         case "init-complete":
           setIsInitialized(true);
+          setExecutionState(ExecutionState.NEW);
           if (sharedArrayBufferSupported) {
             // Create and share interrupt buffer
             try {
@@ -128,20 +131,17 @@ print("All done!")`
           }
           break;
         case "execution-complete":
-          setIsRunning(false);
-          setIsStopping(false);
+          setExecutionState(ExecutionState.COMPLETE);
           setCurrentExecutionId(null);
           addOutputLine("system", "Execution completed.");
           break;
         case "execution-cancelled":
-          setIsRunning(false);
-          setIsStopping(false);
+          setExecutionState(ExecutionState.CANCELLED);
           setCurrentExecutionId(null);
           addOutputLine("system", "Execution cancelled.");
           break;
         case "error":
-          setIsRunning(false);
-          setIsStopping(false);
+          setExecutionState(ExecutionState.FAILED);
           setCurrentExecutionId(null);
           addOutputLine("err", `Error: ${message.message || "Unknown error"}`);
           break;
@@ -153,8 +153,7 @@ print("All done!")`
     worker.onerror = (error) => {
       console.error("Worker error:", error);
       addOutputLine("err", `Worker error: ${error.message}`);
-      setIsRunning(false);
-      setIsStopping(false);
+      setExecutionState(ExecutionState.FAILED);
       setCurrentExecutionId(null);
     };
 
@@ -167,12 +166,15 @@ print("All done!")`
   }, [sharedArrayBufferSupported]);
 
   const handleRunCode = () => {
-    if (!isInitialized || isRunning || isStopping || !workerRef.current) {
+    if (
+      !isInitialized ||
+      executionState === ExecutionState.RUNNING ||
+      !workerRef.current
+    ) {
       return;
     }
 
-    setIsRunning(true);
-    setIsStopping(false);
+    setExecutionState(ExecutionState.RUNNING);
     addOutputLine("system", "Running...");
 
     const executionId = `exec_${executionIdRef.current++}`;
@@ -188,13 +190,12 @@ print("All done!")`
     if (
       !currentExecutionId ||
       !workerRef.current ||
-      isStopping ||
+      executionState !== ExecutionState.RUNNING ||
       !interruptBufferRef.current
     ) {
       return;
     }
 
-    setIsStopping(true);
     addOutputLine("system", "Stopping execution...");
 
     try {
@@ -204,12 +205,15 @@ print("All done!")`
     } catch (error) {
       console.error("Failed to use SharedArrayBuffer for cancellation:", error);
       addOutputLine("err", "Failed to cancel execution");
-      setIsStopping(false);
     }
   };
 
-  const handleEditorChange = (value: string | undefined) => {
-    setCode(value || "");
+  const handleCodeChange = (newCode: string) => {
+    setCode(newCode);
+    // Reset execution state when code changes
+    if (executionState !== ExecutionState.RUNNING) {
+      setExecutionState(ExecutionState.NEW);
+    }
   };
 
   const clearOutput = () => {
@@ -257,58 +261,18 @@ print("All done!")`
           </div>
         )}
 
-        {/* Editor Section */}
-        <div className="border rounded-lg overflow-hidden">
-          <div className="bg-gray-100 px-4 py-2 border-b">
-            <h2 className="text-lg font-semibold">Python Code Editor</h2>
-          </div>
-          <div className="h-64">
-            <Editor
-              height="100%"
-              defaultLanguage="python"
-              value={code}
-              onChange={handleEditorChange}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-                lineNumbers: "on",
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 4,
-                insertSpaces: true,
-              }}
-            />
-          </div>
-        </div>
+        {/* Code Cell */}
+        <CodeCell
+          code={code}
+          onChange={handleCodeChange}
+          onRun={handleRunCode}
+          onStop={handleStopCode}
+          executionState={executionState}
+          isInitialized={isInitialized}
+        />
 
         {/* Control Buttons */}
-        <div className="flex justify-center gap-4">
-          {!isRunning && !isStopping ? (
-            <button
-              onClick={handleRunCode}
-              disabled={!isInitialized}
-              className={`px-6 py-3 rounded-lg font-semibold text-white transition-colors ${
-                !isInitialized
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-              }`}
-            >
-              Run Code
-            </button>
-          ) : (
-            <button
-              onClick={handleStopCode}
-              disabled={isStopping || !interruptBufferRef.current}
-              className={`px-6 py-3 rounded-lg font-semibold text-white transition-colors ${
-                isStopping || !interruptBufferRef.current
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-red-600 hover:bg-red-700 active:bg-red-800"
-              }`}
-            >
-              {isStopping ? "Stopping..." : "Stop"}
-            </button>
-          )}
+        <div className="flex justify-center">
           <button
             onClick={clearOutput}
             className="px-6 py-3 rounded-lg font-semibold text-white bg-gray-600 hover:bg-gray-700 active:bg-gray-800 transition-colors"
@@ -340,9 +304,7 @@ print("All done!")`
         <div className="text-center text-sm text-gray-600">
           Status:{" "}
           {isInitialized
-            ? isStopping
-              ? "Stopping execution..."
-              : isRunning
+            ? executionState === ExecutionState.RUNNING
               ? "Running code..."
               : "Ready"
             : "Initializing..."}

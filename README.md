@@ -6,6 +6,7 @@
 # Docs
 
 - User stories are located in /docs/user-stories
+- When creating a new user story put it in a separate file with a next available number.
 
 # Directory structure
 
@@ -43,6 +44,7 @@
   - **Shared message types** for consistent worker-main thread communication
 
 - 0004.EXECUTION_CANCELLATION.md – Execution cancellation feature implemented with SharedArrayBuffer. Highlights:
+
   - **SharedArrayBuffer cancellation** using `pyodide.setInterruptBuffer()` for immediate cancellation of any Python code
   - **Security headers** added (`Cross-Origin-Embedder-Policy`, `Cross-Origin-Opener-Policy`) to enable SharedArrayBuffer
   - **Availability detection** checking SharedArrayBuffer support and showing error when not available
@@ -53,6 +55,17 @@
   - **Clean state reset** allowing new code execution immediately after cancellation
   - **Status indicators** showing SharedArrayBuffer availability and cancellation capabilities
 
-# Next user story to implement
+- 0005.CODE_CELL_TOGGLE_AND_STATUS.md – Code cell toggle and status feature implemented with collapsible editor and execution state indicators. Highlights:
 
-- All current user stories have been implemented. The Jupyter notebook engine now supports Python code execution with real-time streaming output and immediate execution cancellation via SharedArrayBuffer.
+  - **CodeCell component** created with toggle and status functionality using React state management
+  - **Toggle button** with eye icon (FaRegEye/FaRegEyeSlash) from react-icons to show/hide code editor
+  - **Default hidden state** code editor collapsed by default, showing only extracted top-level comment
+  - **Comment extraction** parsing Python code to extract and display the first non-empty comment line
+  - **Execution state management** tracking 5 states: new, running, complete, failed, cancelled with proper state transitions
+  - **Status button** with color-coded indicators and icons showing current execution state
+  - **Hover interactions** status button shows "Run" or "Stop" actions on hover with appropriate icons
+  - **Smooth animations** CSS transitions for collapsible editor with max-height and opacity changes
+  - **Responsive design** flexible layout working on mobile viewports (≥320px width)
+  - **Accessibility features** proper aria-labels, keyboard focus styles, and screen reader support
+  - **Icon consistency** all icons from react-icons (FaPlay, FaStop, FaCircle, FaCheckCircle, FaTimesCircle, FaSpinner)
+  - **State-based styling** different colors for each execution state (gray=new, blue=running, green=complete, red=failed, orange=cancelled)
