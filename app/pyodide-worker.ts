@@ -13,6 +13,7 @@ interface PyodideInterface {
   loadPackage: (packages: string[]) => Promise<void>;
   runPython: (code: string) => unknown;
   loadPackagesFromImports: (code: string) => Promise<void>;
+  setInterruptBuffer: (buffer: Uint8Array) => void;
   globals: {
     set: (name: string, value: unknown) => void;
     get: (name: string) => unknown;
@@ -20,6 +21,7 @@ interface PyodideInterface {
 }
 
 let pyodide: PyodideInterface | null = null;
+let interruptBuffer: Uint8Array | null = null;
 
 // Load Pyodide
 async function loadPyodideWorker(): Promise<PyodideInterface> {
@@ -50,7 +52,29 @@ async function initializePyodide() {
   }
 }
 
-// Execute Python code with streaming output
+// Set interrupt buffer for SharedArrayBuffer cancellation
+function setInterruptBuffer(buffer: Uint8Array) {
+  if (!pyodide) {
+    ctx.postMessage({
+      type: "error",
+      message: "Pyodide not initialized",
+    });
+    return;
+  }
+
+  try {
+    interruptBuffer = buffer;
+    pyodide.setInterruptBuffer(buffer);
+    console.log("Interrupt buffer set successfully");
+  } catch (error) {
+    ctx.postMessage({
+      type: "error",
+      message: `Failed to set interrupt buffer: ${error}`,
+    });
+  }
+}
+
+// Execute Python code with SharedArrayBuffer interruption
 async function executePython(code: string, id: string) {
   if (!pyodide) {
     ctx.postMessage({
@@ -61,7 +85,19 @@ async function executePython(code: string, id: string) {
     return;
   }
 
+  if (!interruptBuffer) {
+    ctx.postMessage({
+      type: "error",
+      message: "SharedArrayBuffer not available - cancellation not supported",
+      id,
+    });
+    return;
+  }
+
   try {
+    // Clear interrupt buffer for new execution
+    interruptBuffer[0] = 0;
+
     // Set up JavaScript callback for streaming output
     pyodide.globals.set("send_output", (output_type: string, text: string) => {
       ctx.postMessage({
@@ -115,10 +151,13 @@ sys.stderr = StderrCapture()
     // Store the user code in pyodide globals to avoid template literal issues
     pyodide.globals.set("user_code", code);
 
-    // Execute the user code
+    // Execute the user code with KeyboardInterrupt handling
     pyodide.runPython(`
 try:
     exec(user_code, globals())
+except KeyboardInterrupt:
+    # Handle cancellation via SharedArrayBuffer interrupt
+    send_output("out", "\\nExecution interrupted by user\\n")
 except Exception as e:
     import traceback
     error_msg = traceback.format_exc()
@@ -140,6 +179,8 @@ finally:
       message: `Python execution error: ${error}`,
       id,
     });
+  } finally {
+    // Reset execution state - no cleanup needed
   }
 }
 
@@ -153,6 +194,9 @@ ctx.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
       break;
     case "execute":
       await executePython(message.code, message.id);
+      break;
+    case "setInterruptBuffer":
+      setInterruptBuffer(message.interruptBuffer);
       break;
     default:
       ctx.postMessage({

@@ -7,7 +7,11 @@ export interface WorkerOutputMessage {
 }
 
 export interface WorkerStatusMessage {
-  type: "execution-complete" | "error" | "init-complete";
+  type:
+    | "execution-complete"
+    | "error"
+    | "init-complete"
+    | "execution-cancelled";
   message?: string;
   id?: string;
 }
@@ -22,8 +26,16 @@ export interface WorkerInitMessage {
   type: "init";
 }
 
+export interface WorkerSetInterruptBufferMessage {
+  type: "setInterruptBuffer";
+  interruptBuffer: Uint8Array;
+}
+
 // Messages sent from main thread to worker
-export type WorkerInputMessage = WorkerExecuteMessage | WorkerInitMessage;
+export type WorkerInputMessage =
+  | WorkerExecuteMessage
+  | WorkerInitMessage
+  | WorkerSetInterruptBufferMessage;
 
 // Messages sent from worker to main thread
 export type WorkerResponseMessage = WorkerOutputMessage | WorkerStatusMessage;

@@ -22,10 +22,35 @@ print("All done!")`
   );
   const [output, setOutput] = useState<OutputLine[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [currentExecutionId, setCurrentExecutionId] = useState<string | null>(
+    null
+  );
+  const [sharedArrayBufferSupported, setSharedArrayBufferSupported] =
+    useState(false);
   const workerRef = useRef<Worker | null>(null);
+  const interruptBufferRef = useRef<Uint8Array | null>(null);
   const executionIdRef = useRef(0);
   const outputRef = useRef<HTMLPreElement>(null);
+
+  // Check SharedArrayBuffer availability
+  useEffect(() => {
+    const isSupported = typeof SharedArrayBuffer !== "undefined";
+    setSharedArrayBufferSupported(isSupported);
+
+    if (!isSupported) {
+      console.error(
+        "SharedArrayBuffer is not available. Cancellation will not work."
+      );
+      console.error(
+        "This may be due to missing security headers or browser compatibility."
+      );
+      console.error(
+        "Required headers: Cross-Origin-Embedder-Policy: require-corp, Cross-Origin-Opener-Policy: same-origin"
+      );
+    }
+  }, []);
 
   // Auto-scroll to bottom if user is already at bottom
   const scrollToBottomIfAtBottom = () => {
@@ -65,10 +90,32 @@ print("All done!")`
       switch (message.type) {
         case "init-complete":
           setIsInitialized(true);
-          addOutputLine(
-            "system",
-            "Pyodide initialized successfully. Ready to run Python code!"
-          );
+          if (sharedArrayBufferSupported) {
+            // Create and share interrupt buffer
+            try {
+              const buffer = new Uint8Array(new SharedArrayBuffer(1));
+              interruptBufferRef.current = buffer;
+              worker.postMessage({
+                type: "setInterruptBuffer",
+                interruptBuffer: buffer,
+              });
+              addOutputLine(
+                "system",
+                "Pyodide initialized successfully with SharedArrayBuffer cancellation support. Ready to run Python code!"
+              );
+            } catch (error) {
+              addOutputLine(
+                "err",
+                "Failed to create SharedArrayBuffer. Cancellation will not work."
+              );
+              console.error("Failed to create SharedArrayBuffer:", error);
+            }
+          } else {
+            addOutputLine(
+              "err",
+              "SharedArrayBuffer not available. Cancellation will not work."
+            );
+          }
           break;
         case "out":
           if (message.value) {
@@ -82,10 +129,20 @@ print("All done!")`
           break;
         case "execution-complete":
           setIsRunning(false);
+          setIsStopping(false);
+          setCurrentExecutionId(null);
           addOutputLine("system", "Execution completed.");
+          break;
+        case "execution-cancelled":
+          setIsRunning(false);
+          setIsStopping(false);
+          setCurrentExecutionId(null);
+          addOutputLine("system", "Execution cancelled.");
           break;
         case "error":
           setIsRunning(false);
+          setIsStopping(false);
+          setCurrentExecutionId(null);
           addOutputLine("err", `Error: ${message.message || "Unknown error"}`);
           break;
         default:
@@ -97,6 +154,8 @@ print("All done!")`
       console.error("Worker error:", error);
       addOutputLine("err", `Worker error: ${error.message}`);
       setIsRunning(false);
+      setIsStopping(false);
+      setCurrentExecutionId(null);
     };
 
     // Initialize Pyodide
@@ -105,22 +164,48 @@ print("All done!")`
     return () => {
       worker.terminate();
     };
-  }, []);
+  }, [sharedArrayBufferSupported]);
 
   const handleRunCode = () => {
-    if (!isInitialized || isRunning || !workerRef.current) {
+    if (!isInitialized || isRunning || isStopping || !workerRef.current) {
       return;
     }
 
     setIsRunning(true);
+    setIsStopping(false);
     addOutputLine("system", "Running...");
 
     const executionId = `exec_${executionIdRef.current++}`;
+    setCurrentExecutionId(executionId);
     workerRef.current.postMessage({
       type: "execute",
       code,
       id: executionId,
     });
+  };
+
+  const handleStopCode = () => {
+    if (
+      !currentExecutionId ||
+      !workerRef.current ||
+      isStopping ||
+      !interruptBufferRef.current
+    ) {
+      return;
+    }
+
+    setIsStopping(true);
+    addOutputLine("system", "Stopping execution...");
+
+    try {
+      // Set interrupt signal (2 = SIGINT)
+      interruptBufferRef.current[0] = 2;
+      console.log("Interrupt signal sent via SharedArrayBuffer");
+    } catch (error) {
+      console.error("Failed to use SharedArrayBuffer for cancellation:", error);
+      addOutputLine("err", "Failed to cancel execution");
+      setIsStopping(false);
+    }
   };
 
   const handleEditorChange = (value: string | undefined) => {
@@ -161,6 +246,17 @@ print("All done!")`
       <h1 className="text-3xl font-bold mb-6 text-center">Jupyter Engine</h1>
 
       <div className="space-y-4">
+        {/* SharedArrayBuffer Status */}
+        {!sharedArrayBufferSupported && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <strong>Error:</strong> SharedArrayBuffer is not available.
+            Execution cancellation will not work. This may be due to missing
+            security headers or browser compatibility. Required headers:
+            Cross-Origin-Embedder-Policy: require-corp,
+            Cross-Origin-Opener-Policy: same-origin
+          </div>
+        )}
+
         {/* Editor Section */}
         <div className="border rounded-lg overflow-hidden">
           <div className="bg-gray-100 px-4 py-2 border-b">
@@ -188,17 +284,31 @@ print("All done!")`
 
         {/* Control Buttons */}
         <div className="flex justify-center gap-4">
-          <button
-            onClick={handleRunCode}
-            disabled={!isInitialized || isRunning}
-            className={`px-6 py-3 rounded-lg font-semibold text-white transition-colors ${
-              !isInitialized || isRunning
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-            }`}
-          >
-            {isRunning ? "Running..." : "Run Code"}
-          </button>
+          {!isRunning && !isStopping ? (
+            <button
+              onClick={handleRunCode}
+              disabled={!isInitialized}
+              className={`px-6 py-3 rounded-lg font-semibold text-white transition-colors ${
+                !isInitialized
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+              }`}
+            >
+              Run Code
+            </button>
+          ) : (
+            <button
+              onClick={handleStopCode}
+              disabled={isStopping || !interruptBufferRef.current}
+              className={`px-6 py-3 rounded-lg font-semibold text-white transition-colors ${
+                isStopping || !interruptBufferRef.current
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-red-600 hover:bg-red-700 active:bg-red-800"
+              }`}
+            >
+              {isStopping ? "Stopping..." : "Stop"}
+            </button>
+          )}
           <button
             onClick={clearOutput}
             className="px-6 py-3 rounded-lg font-semibold text-white bg-gray-600 hover:bg-gray-700 active:bg-gray-800 transition-colors"
@@ -230,10 +340,22 @@ print("All done!")`
         <div className="text-center text-sm text-gray-600">
           Status:{" "}
           {isInitialized
-            ? isRunning
+            ? isStopping
+              ? "Stopping execution..."
+              : isRunning
               ? "Running code..."
               : "Ready"
             : "Initializing..."}
+          {sharedArrayBufferSupported && (
+            <span className="text-green-600 ml-2">
+              • SharedArrayBuffer enabled
+            </span>
+          )}
+          {!sharedArrayBufferSupported && (
+            <span className="text-red-600 ml-2">
+              • SharedArrayBuffer disabled
+            </span>
+          )}
         </div>
       </div>
     </main>
