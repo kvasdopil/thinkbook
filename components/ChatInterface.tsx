@@ -18,12 +18,16 @@ interface ChatInterfaceProps {
   className?: string;
   cellData?: CellData;
   onCellUpdate?: (text: string) => void;
+  getCellsData?: () => CellData[];
+  onMultiCellUpdate?: (cellId: number, newText: string) => void;
 }
 
 export default function ChatInterface({
   className = "",
   cellData,
   onCellUpdate,
+  getCellsData,
+  onMultiCellUpdate,
 }: ChatInterfaceProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -55,7 +59,7 @@ export default function ChatInterface({
             // Validate parameters with Zod
             const validatedParams = listCellsSchema.parse(toolCall.args);
             result = await listCellsImplementation(validatedParams, () =>
-              cellData ? [cellData] : []
+              getCellsData ? getCellsData() : cellData ? [cellData] : []
             );
           } else if (toolCall.toolName === "updateCell") {
             // Validate parameters with Zod
@@ -63,7 +67,9 @@ export default function ChatInterface({
             result = await updateCellImplementation(
               validatedParams,
               (id: number, text: string) => {
-                if (onCellUpdate && cellData?.id === id) {
+                if (onMultiCellUpdate) {
+                  onMultiCellUpdate(id, text);
+                } else if (onCellUpdate && cellData?.id === id) {
                   onCellUpdate(text);
                 }
               }

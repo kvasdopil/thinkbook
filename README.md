@@ -100,3 +100,22 @@
   - **Type safety** shared TypeScript types in `types/ai-functions.ts` for consistent interfaces
   - **Error handling** function failures display in red balloons with error messages
   - **One-by-one execution** functions called sequentially as specified in requirements
+
+- 0008.MULTIPLE_CODE_CELLS.md – Multiple code cells feature implemented with comprehensive cell management. Highlights:
+
+  - **Multiple cells architecture** transformed from single cell to cells array with individual execution states
+  - **Run All button** executes all cells sequentially from top to bottom, disabled when any cell is running
+  - **Add Cell button** creates new empty Python cells at the end of the notebook
+  - **Individual cell management** each cell has its own code, output, and execution state
+  - **Cell-specific output** output displays within each cell instead of global output section
+  - **Delete functionality** trash button with confirmation dialog for each cell (minimum 1 cell required)
+  - **Execution state management** proper handling of running states across multiple cells
+  - **Non-editable running cells** cells become read-only during execution to prevent conflicts
+  - **AI function compatibility** updated `listCells` and `updateCell` functions to work with multiple cells
+  - **Sequential execution** "Run All" processes cells one by one with proper state transitions
+  - **Cell-specific output clearing** output clears when each cell begins execution
+  - **Accessibility compliance** WCAG 2.1 AA features including proper ARIA labels, keyboard navigation, screen reader support
+  - **Focus management** proper focus ring styles and tabIndex management for all interactive elements
+  - **Status announcements** screen reader announcements for cell execution states and operations
+  - **Error handling** robust error handling for cell operations and state management
+  - **Responsive design** maintains mobile-friendly layout with proper spacing and controls

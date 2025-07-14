@@ -15,5 +15,14 @@ export const listCellsImplementation = async (
   params: z.infer<typeof listCellsSchema>,
   getCellsData: () => CellData[]
 ): Promise<CellData[]> => {
-  return getCellsData();
+  // Get all cells from the notebook
+  const cells = getCellsData();
+
+  // Return a snapshot of all cells with their current state
+  return cells.map((cell) => ({
+    id: cell.id,
+    type: cell.type,
+    text: cell.text,
+    output: cell.output,
+  }));
 };

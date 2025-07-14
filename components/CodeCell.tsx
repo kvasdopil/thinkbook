@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import {
   FaRegEye,
@@ -11,9 +11,8 @@ import {
   FaCheckCircle,
   FaTimesCircle,
   FaSpinner,
+  FaTrash,
 } from "react-icons/fa";
-import ChatInterface from "./ChatInterface";
-import type { CellData } from "../types/ai-functions";
 
 export enum ExecutionState {
   NEW = "new",
@@ -23,15 +22,23 @@ export enum ExecutionState {
   CANCELLED = "cancelled",
 }
 
+interface OutputLine {
+  type: "out" | "err" | "system";
+  value: string;
+  timestamp: number;
+}
+
 interface CodeCellProps {
   code: string;
   onChange: (code: string) => void;
   onRun: () => void;
   onStop: () => void;
+  onDelete: () => void;
   executionState: ExecutionState;
+  output?: OutputLine[];
   disabled?: boolean;
   isInitialized?: boolean;
-  output?: string;
+  canDelete?: boolean;
 }
 
 // Extract top-level comment from Python code
@@ -113,13 +120,17 @@ export default function CodeCell({
   onChange,
   onRun,
   onStop,
+  onDelete,
   executionState,
+  output,
   disabled = false,
   isInitialized = false,
-  output,
+  canDelete = true,
 }: CodeCellProps) {
   const [isCodeVisible, setIsCodeVisible] = useState(false); // Default: hidden
   const [isStatusHovered, setIsStatusHovered] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const outputRef = useRef<HTMLPreElement>(null);
 
   const topLevelComment = extractTopLevelComment(code);
   const statusConfig = getStatusConfig(executionState, isStatusHovered);
@@ -127,6 +138,13 @@ export default function CodeCell({
   const canRun =
     isInitialized && executionState !== ExecutionState.RUNNING && !disabled;
   const canStop = executionState === ExecutionState.RUNNING && !disabled;
+
+  // Auto-scroll to bottom when output changes
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [output]);
 
   const handleStatusClick = () => {
     if (canStop) {
@@ -144,23 +162,45 @@ export default function CodeCell({
     setIsCodeVisible(!isCodeVisible);
   };
 
-  // Create cell data for function calls
-  const cellData: CellData = {
-    id: 0, // For MVP, we have exactly one cell
-    type: "code",
-    text: code,
-    output: output,
+  const handleDeleteClick = () => {
+    if (canDelete) {
+      setShowDeleteConfirm(true);
+    }
   };
 
-  // Handle cell updates from AI function calls
-  const handleCellUpdate = (newText: string) => {
-    onChange(newText);
+  const handleDeleteConfirm = () => {
+    setShowDeleteConfirm(false);
+    onDelete();
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  // Format output for display
+  const formatOutput = (output: OutputLine[]) => {
+    return output.map((line, index) => {
+      let className = "text-green-400"; // Default stdout color
+
+      if (line.type === "err") {
+        className = "text-red-400"; // Error color
+      } else if (line.type === "system") {
+        className = "text-blue-400"; // System color
+      }
+
+      return (
+        <span key={index} className={className}>
+          {line.value}
+          {index < output.length - 1 && "\n"}
+        </span>
+      );
+    });
   };
 
   return (
     <div className="space-y-4">
       {/* Chat Interface */}
-      <ChatInterface cellData={cellData} onCellUpdate={handleCellUpdate} />
+      {/* Removed ChatInterface component */}
 
       {/* Code Cell */}
       <div className="border rounded-lg overflow-hidden">
@@ -202,18 +242,75 @@ export default function CodeCell({
             </div>
           </div>
 
-          {/* Toggle Button */}
-          <button
-            onClick={toggleCodeVisibility}
-            className="ml-3 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-md transition-colors"
-            aria-label={`${isCodeVisible ? "Hide" : "Show"} code editor`}
-          >
-            {isCodeVisible ? (
-              <FaRegEyeSlash className="w-4 h-4" />
-            ) : (
-              <FaRegEye className="w-4 h-4" />
+          {/* Controls */}
+          <div className="flex items-center space-x-2">
+            {/* Delete Button */}
+            {canDelete && (
+              <div className="relative">
+                <button
+                  onClick={handleDeleteClick}
+                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                  aria-label="Delete cell"
+                  aria-describedby="delete-help"
+                >
+                  <FaTrash className="w-4 h-4" />
+                </button>
+
+                {/* Delete Confirmation Dialog */}
+                {showDeleteConfirm && (
+                  <div
+                    className="absolute right-0 top-full mt-2 bg-white border rounded-lg shadow-lg p-3 z-10 min-w-48"
+                    role="dialog"
+                    aria-labelledby="delete-dialog-title"
+                    aria-describedby="delete-dialog-description"
+                  >
+                    <div
+                      id="delete-dialog-title"
+                      className="text-sm font-medium text-gray-900 mb-2"
+                    >
+                      Delete Cell
+                    </div>
+                    <div
+                      id="delete-dialog-description"
+                      className="text-sm text-gray-700 mb-3"
+                    >
+                      Are you sure you want to delete this cell? This action
+                      cannot be undone.
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        onClick={handleDeleteCancel}
+                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 rounded"
+                        aria-label="Cancel deletion"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleDeleteConfirm}
+                        className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                        aria-label="Confirm deletion"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </button>
+
+            {/* Toggle Button */}
+            <button
+              onClick={toggleCodeVisibility}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-md transition-colors"
+              aria-label={`${isCodeVisible ? "Hide" : "Show"} code editor`}
+            >
+              {isCodeVisible ? (
+                <FaRegEyeSlash className="w-4 h-4" />
+              ) : (
+                <FaRegEye className="w-4 h-4" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Code Editor (collapsible) */}
@@ -238,9 +335,41 @@ export default function CodeCell({
                 automaticLayout: true,
                 tabSize: 4,
                 insertSpaces: true,
-                readOnly: disabled,
+                readOnly: disabled || executionState === ExecutionState.RUNNING,
               }}
             />
+          </div>
+        </div>
+
+        {/* Output Section */}
+        {output &&
+          output.filter((line) => line.type !== "system").length > 0 && (
+            <div className="border-t">
+              <div className="bg-gray-100 px-4 py-2 border-b">
+                <h3 className="text-sm font-semibold text-gray-700">Output</h3>
+              </div>
+              <div className="p-4">
+                <pre
+                  ref={outputRef}
+                  className="bg-black text-green-400 p-4 rounded font-mono text-sm overflow-auto max-h-64 whitespace-pre-wrap"
+                  role="log"
+                  aria-live="polite"
+                  aria-label="Cell execution output"
+                  tabIndex={0}
+                >
+                  {formatOutput(
+                    output.filter((line) => line.type !== "system")
+                  )}
+                </pre>
+              </div>
+            </div>
+          )}
+
+        {/* Screen reader help text */}
+        <div className="sr-only">
+          <div id="delete-help">
+            Permanently removes this cell from the notebook. This action cannot
+            be undone.
           </div>
         </div>
       </div>

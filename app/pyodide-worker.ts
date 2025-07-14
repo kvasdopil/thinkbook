@@ -158,27 +158,37 @@ try:
 except KeyboardInterrupt:
     # Handle cancellation via SharedArrayBuffer interrupt
     send_output("out", "\\nExecution interrupted by user\\n")
+    raise  # Re-raise to be caught by outer try-catch
 except Exception as e:
     import traceback
     error_msg = traceback.format_exc()
     send_output("err", error_msg)
+    raise  # Re-raise to be caught by outer try-catch
 finally:
     # Restore original functions
     builtins.print = original_print
     sys.stderr = original_stderr
 `);
 
-    // Send completion message
+    // Send completion message only if not interrupted
     ctx.postMessage({
       type: "execution-complete",
       id,
     });
   } catch (error) {
-    ctx.postMessage({
-      type: "error",
-      message: `Python execution error: ${error}`,
-      id,
-    });
+    // Check if this was a KeyboardInterrupt (cancellation)
+    if (error && error.toString().includes("KeyboardInterrupt")) {
+      ctx.postMessage({
+        type: "execution-cancelled",
+        id,
+      });
+    } else {
+      ctx.postMessage({
+        type: "error",
+        message: `Python execution error: ${error}`,
+        id,
+      });
+    }
   } finally {
     // Reset execution state - no cleanup needed
   }
