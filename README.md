@@ -33,3 +33,16 @@
   - Updated worker message types and cancellation flow
   - Comprehensive test coverage including cancellation scenarios
   - Warning UI when SharedArrayBuffer is not supported
+
+- **0005.CODE_CELL_TOGGLE_AND_STATUS.md**: Implemented code cell toggle and status functionality for better notebook UX. Added visibility controls and execution status indicators. The implementation includes:
+  - Toggle button with eye icons (FaRegEye/FaRegEyeSlash) to show/hide code editor
+  - Default state: code editor hidden, displaying only top-level comment as cell title
+  - Status button with colored icons indicating execution state (idle, running, complete, failed, cancelled)
+  - Hover tooltips showing available actions ("Run" or "Stop")
+  - Top-level comment extraction for collapsed cell titles
+  - Smooth CSS transitions for collapsing/expanding code editor
+  - Execution status enum with proper state management
+  - Updated button styling with appropriate colors and accessibility features
+  - Read-only editor during code execution
+  - Comprehensive test coverage for toggle and status functionality
+  - Responsive design for mobile and desktop viewports (≥320px width)

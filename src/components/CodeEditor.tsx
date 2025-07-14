@@ -2,8 +2,18 @@
 
 import { Editor } from '@monaco-editor/react'
 import { useState, useRef, useEffect } from 'react'
-import { FaPlay, FaStop } from 'react-icons/fa'
+import {
+  FaRegEye,
+  FaRegEyeSlash,
+  FaCircle,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaExclamationCircle,
+} from 'react-icons/fa'
 import type { PyodideMessage, PyodideResponse } from '../types/worker'
+
+// Execution status enum
+type ExecutionStatus = 'idle' | 'running' | 'complete' | 'failed' | 'cancelled'
 
 interface CodeEditorProps {
   initialCode?: string
@@ -19,11 +29,35 @@ export default function CodeEditor({
   const [isLoading, setIsLoading] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
   const [isWorkerReady, setIsWorkerReady] = useState(false)
+  const [isCodeVisible, setIsCodeVisible] = useState(false) // Default: code editor hidden
+  const [executionStatus, setExecutionStatus] =
+    useState<ExecutionStatus>('idle')
   const [sharedArrayBufferSupported, setSharedArrayBufferSupported] =
     useState(false)
   const workerRef = useRef<Worker | null>(null)
   const outputRef = useRef<HTMLPreElement>(null)
   const interruptBufferRef = useRef<SharedArrayBuffer | null>(null)
+
+  // Extract top-level comment for markdown display
+  const getTopLevelComment = () => {
+    const lines = code.split('\n')
+    const commentLines = []
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('#')) {
+        commentLines.push(trimmed.substring(1).trim())
+      } else if (trimmed === '') {
+        // Skip empty lines
+        continue
+      } else {
+        // Stop at first non-comment, non-empty line
+        break
+      }
+    }
+
+    return commentLines.length > 0 ? commentLines.join(' ') : 'Python Code Cell'
+  }
 
   // Auto-scroll helper function
   const scrollToBottomIfNeeded = () => {
@@ -82,11 +116,13 @@ export default function CodeEditor({
           // Execution completed successfully
           setIsLoading(false)
           setIsStopping(false)
+          setExecutionStatus('complete')
           break
         case 'execution-cancelled':
           setOutput((prev) => prev + '\nExecution interrupted by user\n')
           setIsLoading(false)
           setIsStopping(false)
+          setExecutionStatus('cancelled')
           setTimeout(scrollToBottomIfNeeded, 0)
           break
         case 'shared-array-buffer-unavailable':
@@ -97,12 +133,14 @@ export default function CodeEditor({
           )
           setIsLoading(false)
           setIsStopping(false)
+          setExecutionStatus('failed')
           setTimeout(scrollToBottomIfNeeded, 0)
           break
         case 'error':
           setOutput((prev) => prev + `\nError: ${error}`)
           setIsLoading(false)
           setIsStopping(false)
+          setExecutionStatus('failed')
           setTimeout(scrollToBottomIfNeeded, 0)
           break
       }
@@ -112,6 +150,7 @@ export default function CodeEditor({
       setOutput((prev) => prev + `\nWorker error: ${error.message}`)
       setIsLoading(false)
       setIsStopping(false)
+      setExecutionStatus('failed')
       setTimeout(scrollToBottomIfNeeded, 0)
     }
 
@@ -128,6 +167,10 @@ export default function CodeEditor({
     const newCode = value || ''
     setCode(newCode)
     onCodeChange?.(newCode)
+    // Reset status to idle when code changes
+    if (executionStatus !== 'running') {
+      setExecutionStatus('idle')
+    }
   }
 
   const runCode = () => {
@@ -138,6 +181,7 @@ export default function CodeEditor({
 
     setIsLoading(true)
     setIsStopping(false)
+    setExecutionStatus('running')
     setOutput('') // Clear output when starting execution
 
     const executeMessage: PyodideMessage = {
@@ -176,97 +220,141 @@ export default function CodeEditor({
     view[0] = 2
   }
 
-  const getButtonContent = () => {
-    if (isStopping) {
-      return (
-        <>
-          <FaStop className="w-4 h-4 mr-2" />
-          Stopping...
-        </>
-      )
-    } else if (isLoading) {
-      return (
-        <>
-          <FaPlay className="w-4 h-4 mr-2" />
-          Running...
-        </>
-      )
-    } else {
-      return (
-        <>
-          <FaPlay className="w-4 h-4 mr-2" />
-          Run
-        </>
-      )
+  const toggleCodeVisibility = () => {
+    setIsCodeVisible(!isCodeVisible)
+  }
+
+  // Get status button color and icon based on execution status
+  const getStatusButtonProps = () => {
+    if (isLoading) {
+      return {
+        icon: FaCircle,
+        color: 'text-blue-500',
+        bgColor: 'bg-blue-50 hover:bg-blue-100',
+        title: 'Stop',
+        action: stopExecution,
+        disabled: isStopping,
+      }
+    }
+
+    switch (executionStatus) {
+      case 'running':
+        return {
+          icon: FaCircle,
+          color: 'text-blue-500',
+          bgColor: 'bg-blue-50 hover:bg-blue-100',
+          title: 'Stop',
+          action: stopExecution,
+          disabled: isStopping,
+        }
+      case 'complete':
+        return {
+          icon: FaCheckCircle,
+          color: 'text-green-500',
+          bgColor: 'bg-green-50 hover:bg-green-100',
+          title: 'Run',
+          action: runCode,
+          disabled: !isWorkerReady,
+        }
+      case 'failed':
+        return {
+          icon: FaTimesCircle,
+          color: 'text-red-500',
+          bgColor: 'bg-red-50 hover:bg-red-100',
+          title: 'Run',
+          action: runCode,
+          disabled: !isWorkerReady,
+        }
+      case 'cancelled':
+        return {
+          icon: FaExclamationCircle,
+          color: 'text-orange-500',
+          bgColor: 'bg-orange-50 hover:bg-orange-100',
+          title: 'Run',
+          action: runCode,
+          disabled: !isWorkerReady,
+        }
+      default: // idle
+        return {
+          icon: FaCircle,
+          color: 'text-gray-400',
+          bgColor: 'bg-gray-50 hover:bg-gray-100',
+          title: 'Run',
+          action: runCode,
+          disabled: !isWorkerReady,
+        }
     }
   }
 
-  const getStopButtonContent = () => {
-    return (
-      <>
-        <FaStop className="w-4 h-4 mr-2" />
-        {isStopping ? 'Stopping...' : 'Stop'}
-      </>
-    )
-  }
+  const statusButtonProps = getStatusButtonProps()
+  const StatusIcon = statusButtonProps.icon
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 space-y-4">
       <div className="border border-gray-300 rounded-lg overflow-hidden">
         <div className="bg-gray-100 px-4 py-2 border-b border-gray-300 flex justify-between items-center">
-          <h3 className="text-sm font-medium text-gray-700">Python Editor</h3>
-          <div className="flex gap-2">
-            {isLoading ? (
-              <>
-                <button
-                  onClick={runCode}
-                  disabled={true}
-                  className="px-4 py-2 rounded text-sm font-medium transition-colors bg-gray-400 text-gray-200 cursor-not-allowed flex items-center"
-                >
-                  {getButtonContent()}
-                </button>
-                <button
-                  onClick={stopExecution}
-                  disabled={isStopping}
-                  className={`px-4 py-2 rounded text-sm font-medium transition-colors flex items-center ${
-                    !isStopping
-                      ? 'bg-red-600 text-white hover:bg-red-700'
-                      : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                  }`}
-                >
-                  {getStopButtonContent()}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={runCode}
-                disabled={!isWorkerReady}
-                className={`px-4 py-2 rounded text-sm font-medium transition-colors flex items-center ${
-                  isWorkerReady
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                }`}
-              >
-                {getButtonContent()}
-              </button>
-            )}
+          <div className="flex items-center gap-3">
+            <h3 className="text-sm font-medium text-gray-700">
+              {isCodeVisible ? 'Python Editor' : getTopLevelComment()}
+            </h3>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Status Button */}
+            <button
+              onClick={statusButtonProps.action}
+              disabled={statusButtonProps.disabled}
+              title={statusButtonProps.title}
+              className={`p-2 rounded-full transition-colors ${statusButtonProps.bgColor} ${
+                statusButtonProps.disabled
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'cursor-pointer'
+              }`}
+              aria-label={`${statusButtonProps.title} code execution`}
+            >
+              <StatusIcon className={`w-4 h-4 ${statusButtonProps.color}`} />
+            </button>
+
+            {/* Toggle Code Visibility Button */}
+            <button
+              onClick={toggleCodeVisibility}
+              className="p-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors"
+              aria-label={
+                isCodeVisible ? 'Hide code editor' : 'Show code editor'
+              }
+              title={isCodeVisible ? 'Hide code editor' : 'Show code editor'}
+            >
+              {isCodeVisible ? (
+                <FaRegEyeSlash className="w-4 h-4 text-gray-600" />
+              ) : (
+                <FaRegEye className="w-4 h-4 text-gray-600" />
+              )}
+            </button>
           </div>
         </div>
-        <div className="h-64">
-          <Editor
-            height="100%"
-            defaultLanguage="python"
-            value={code}
-            onChange={handleCodeChange}
-            theme="vs-light"
-            options={{
-              minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              fontSize: 14,
-              wordWrap: 'on',
-              automaticLayout: true,
-            }}
-          />
+
+        {/* Code Editor - with smooth transition */}
+        <div
+          className={`transition-all duration-300 ease-in-out overflow-hidden ${
+            isCodeVisible ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="h-64">
+            <Editor
+              height="100%"
+              defaultLanguage="python"
+              value={code}
+              onChange={handleCodeChange}
+              theme="vs-light"
+              options={{
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                fontSize: 14,
+                wordWrap: 'on',
+                automaticLayout: true,
+                readOnly: isLoading, // Prevent editing during execution
+              }}
+            />
+          </div>
         </div>
       </div>
 
