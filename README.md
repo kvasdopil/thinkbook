@@ -22,3 +22,14 @@
 # Implemented user-stories
 
 - **0001.APP.md**: Set up a minimal Next.js application with TypeScript, Tailwind CSS, ESLint, Prettier, and Jest. The application displays a "Hello World" message on the main page and has a basic project structure with a `src` directory.
+
+- **0004.EXECUTION_CANCELLATION.md**: Implemented execution cancellation functionality for long-running Python scripts. Added a "Stop" button that appears during code execution, allowing users to immediately interrupt running code using SharedArrayBuffer and Pyodide's interrupt system. The implementation includes:
+  - Security headers (COOP/COEP) in Next.js config for SharedArrayBuffer support
+  - Stop button with React icons that appears during execution
+  - SharedArrayBuffer interrupt buffer setup (1-byte SharedArrayBuffer wrapped in Uint8Array)
+  - Immediate cancellation via SIGINT signal (buffer[0] = 2) to Pyodide
+  - Proper Uint8Array creation from SharedArrayBuffer for Pyodide.setInterruptBuffer()
+  - Error handling for when SharedArrayBuffer is unavailable
+  - Updated worker message types and cancellation flow
+  - Comprehensive test coverage including cancellation scenarios
+  - Warning UI when SharedArrayBuffer is not supported

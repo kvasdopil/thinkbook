@@ -1,12 +1,9 @@
 import '@testing-library/jest-dom'
 
-// Mock Worker for tests since it's not available in Jest environment
-global.Worker = class {
-  constructor(url) {
-    this.url = url
-    this.onmessage = null
-    this.onerror = null
-  }
+// Mock Worker
+global.Worker = class MockWorker {
+  onmessage = null
+  onerror = null
 
   postMessage(data) {
     // Simulate async behavior
@@ -15,6 +12,8 @@ global.Worker = class {
         // Mock responses based on message type
         if (data.type === 'init') {
           this.onmessage({ data: { type: 'init-complete' } })
+        } else if (data.type === 'setInterruptBuffer') {
+          this.onmessage({ data: { type: 'interrupt-buffer-set' } })
         } else if (data.type === 'execute') {
           // Simulate streaming output for print statements
           const lines = data.code
@@ -27,7 +26,7 @@ global.Worker = class {
               setTimeout(
                 () => {
                   // Extract the content from print() calls
-                  const match = line.match(/print\((.*)\)/)
+                  const match = line.match(/print\(["'](.*?)["']\)/)
                   const content = match
                     ? match[1].replace(/['"]/g, '')
                     : 'test output'

@@ -2,6 +2,7 @@
 
 import { Editor } from '@monaco-editor/react'
 import { useState, useRef, useEffect } from 'react'
+import { FaPlay, FaStop } from 'react-icons/fa'
 import type { PyodideMessage, PyodideResponse } from '../types/worker'
 
 interface CodeEditorProps {
@@ -16,9 +17,13 @@ export default function CodeEditor({
   const [code, setCode] = useState(initialCode)
   const [output, setOutput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isStopping, setIsStopping] = useState(false)
   const [isWorkerReady, setIsWorkerReady] = useState(false)
+  const [sharedArrayBufferSupported, setSharedArrayBufferSupported] =
+    useState(false)
   const workerRef = useRef<Worker | null>(null)
   const outputRef = useRef<HTMLPreElement>(null)
+  const interruptBufferRef = useRef<SharedArrayBuffer | null>(null)
 
   // Auto-scroll helper function
   const scrollToBottomIfNeeded = () => {
@@ -34,6 +39,10 @@ export default function CodeEditor({
   }
 
   useEffect(() => {
+    // Check SharedArrayBuffer support
+    const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined'
+    setSharedArrayBufferSupported(hasSharedArrayBuffer)
+
     // Initialize web worker
     const worker = new Worker(
       new URL('../workers/pyodide.worker.ts', import.meta.url)
@@ -47,6 +56,20 @@ export default function CodeEditor({
         case 'init-complete':
           setIsWorkerReady(true)
           setOutput('Python environment ready! 🐍')
+
+          // Set up interrupt buffer if SharedArrayBuffer is supported
+          if (hasSharedArrayBuffer) {
+            const buffer = new SharedArrayBuffer(1) // 1 byte for interrupt signal
+            interruptBufferRef.current = buffer
+            const setBufferMessage: PyodideMessage = {
+              type: 'setInterruptBuffer',
+              buffer,
+            }
+            worker.postMessage(setBufferMessage)
+          }
+          break
+        case 'interrupt-buffer-set':
+          // Buffer successfully set up
           break
         case 'output':
           if (streamOutput) {
@@ -58,10 +81,28 @@ export default function CodeEditor({
         case 'result':
           // Execution completed successfully
           setIsLoading(false)
+          setIsStopping(false)
+          break
+        case 'execution-cancelled':
+          setOutput((prev) => prev + '\nExecution interrupted by user\n')
+          setIsLoading(false)
+          setIsStopping(false)
+          setTimeout(scrollToBottomIfNeeded, 0)
+          break
+        case 'shared-array-buffer-unavailable':
+          setOutput(
+            (prev) =>
+              prev +
+              '\nError: SharedArrayBuffer not supported. Cancellation unavailable.\n'
+          )
+          setIsLoading(false)
+          setIsStopping(false)
+          setTimeout(scrollToBottomIfNeeded, 0)
           break
         case 'error':
           setOutput((prev) => prev + `\nError: ${error}`)
           setIsLoading(false)
+          setIsStopping(false)
           setTimeout(scrollToBottomIfNeeded, 0)
           break
       }
@@ -70,6 +111,7 @@ export default function CodeEditor({
     worker.onerror = (error) => {
       setOutput((prev) => prev + `\nWorker error: ${error.message}`)
       setIsLoading(false)
+      setIsStopping(false)
       setTimeout(scrollToBottomIfNeeded, 0)
     }
 
@@ -95,10 +137,77 @@ export default function CodeEditor({
     }
 
     setIsLoading(true)
+    setIsStopping(false)
     setOutput('') // Clear output when starting execution
 
-    const executeMessage: PyodideMessage = { type: 'execute', code }
+    const executeMessage: PyodideMessage = {
+      type: 'execute',
+      code,
+    }
     workerRef.current.postMessage(executeMessage)
+  }
+
+  const stopExecution = () => {
+    if (!sharedArrayBufferSupported) {
+      setOutput(
+        (prev) =>
+          prev +
+          '\nError: SharedArrayBuffer not supported. Cancellation unavailable.\n'
+      )
+      setTimeout(scrollToBottomIfNeeded, 0)
+      return
+    }
+
+    if (!interruptBufferRef.current) {
+      setOutput(
+        (prev) =>
+          prev +
+          '\nError: Interrupt buffer not initialized. Cancellation unavailable.\n'
+      )
+      setTimeout(scrollToBottomIfNeeded, 0)
+      return
+    }
+
+    setIsStopping(true)
+
+    // Set interrupt signal: buffer[0] = 2 triggers SIGINT in Pyodide
+    // This must be done in the main thread as the worker might be blocked
+    const view = new Uint8Array(interruptBufferRef.current)
+    view[0] = 2
+  }
+
+  const getButtonContent = () => {
+    if (isStopping) {
+      return (
+        <>
+          <FaStop className="w-4 h-4 mr-2" />
+          Stopping...
+        </>
+      )
+    } else if (isLoading) {
+      return (
+        <>
+          <FaPlay className="w-4 h-4 mr-2" />
+          Running...
+        </>
+      )
+    } else {
+      return (
+        <>
+          <FaPlay className="w-4 h-4 mr-2" />
+          Run
+        </>
+      )
+    }
+  }
+
+  const getStopButtonContent = () => {
+    return (
+      <>
+        <FaStop className="w-4 h-4 mr-2" />
+        {isStopping ? 'Stopping...' : 'Stop'}
+      </>
+    )
   }
 
   return (
@@ -106,17 +215,42 @@ export default function CodeEditor({
       <div className="border border-gray-300 rounded-lg overflow-hidden">
         <div className="bg-gray-100 px-4 py-2 border-b border-gray-300 flex justify-between items-center">
           <h3 className="text-sm font-medium text-gray-700">Python Editor</h3>
-          <button
-            onClick={runCode}
-            disabled={!isWorkerReady || isLoading}
-            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-              isWorkerReady && !isLoading
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-            }`}
-          >
-            {isLoading ? 'Running...' : 'Run'}
-          </button>
+          <div className="flex gap-2">
+            {isLoading ? (
+              <>
+                <button
+                  onClick={runCode}
+                  disabled={true}
+                  className="px-4 py-2 rounded text-sm font-medium transition-colors bg-gray-400 text-gray-200 cursor-not-allowed flex items-center"
+                >
+                  {getButtonContent()}
+                </button>
+                <button
+                  onClick={stopExecution}
+                  disabled={isStopping}
+                  className={`px-4 py-2 rounded text-sm font-medium transition-colors flex items-center ${
+                    !isStopping
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  }`}
+                >
+                  {getStopButtonContent()}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={runCode}
+                disabled={!isWorkerReady}
+                className={`px-4 py-2 rounded text-sm font-medium transition-colors flex items-center ${
+                  isWorkerReady
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                }`}
+              >
+                {getButtonContent()}
+              </button>
+            )}
+          </div>
         </div>
         <div className="h-64">
           <Editor
@@ -137,8 +271,13 @@ export default function CodeEditor({
       </div>
 
       <div className="border border-gray-300 rounded-lg overflow-hidden">
-        <div className="bg-gray-100 px-4 py-2 border-b border-gray-300">
+        <div className="bg-gray-100 px-4 py-2 border-b border-gray-300 flex justify-between items-center">
           <h3 className="text-sm font-medium text-gray-700">Output</h3>
+          {!sharedArrayBufferSupported && (
+            <span className="text-xs text-orange-600 font-medium">
+              ⚠️ SharedArrayBuffer not supported - cancellation unavailable
+            </span>
+          )}
         </div>
         <div className="p-4 bg-gray-50 min-h-32 max-h-96 overflow-y-auto">
           <pre

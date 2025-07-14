@@ -28,6 +28,25 @@ async function initializePyodide() {
   }
 }
 
+function setInterruptBuffer(buffer: SharedArrayBuffer) {
+  try {
+    // Pyodide expects a Uint8Array, not raw SharedArrayBuffer
+    const interruptBuffer = new Uint8Array(buffer)
+    pyodide.setInterruptBuffer(interruptBuffer)
+
+    const response: PyodideResponse = {
+      type: 'interrupt-buffer-set',
+    }
+    self.postMessage(response)
+  } catch (error) {
+    const response: PyodideResponse = {
+      type: 'error',
+      error: `Failed to set interrupt buffer: ${error}`,
+    }
+    self.postMessage(response)
+  }
+}
+
 async function executeCode(code: string) {
   if (!pyodide) {
     const response: PyodideResponse = {
@@ -73,14 +92,17 @@ _original_stderr_write = sys.stderr.write
 
 def _streaming_print(*args, **kwargs):
     """Custom print function that streams output immediately"""
-    # Copy kwargs and ensure we handle the file parameter
     import io
     
     # Create a StringIO to capture the formatted output
     output_buffer = io.StringIO()
     
-    # Use original print to format the output into our buffer
-    _original_print(*args, **kwargs, file=output_buffer)
+    # Remove file parameter from kwargs if it exists and always use our buffer
+    kwargs_copy = kwargs.copy()
+    kwargs_copy['file'] = output_buffer
+    
+    # Call original print with our buffer
+    _original_print(*args, **kwargs_copy)
     
     # Get the formatted output and send it via JavaScript callback
     output_text = output_buffer.getvalue()
@@ -125,16 +147,25 @@ sys.stderr.write = _original_stderr_write
 `)
     } catch {}
 
-    const response: PyodideResponse = {
-      type: 'error',
-      error: String(error),
+    // Check if this was a KeyboardInterrupt (cancellation)
+    const errorString = String(error)
+    if (errorString.includes('KeyboardInterrupt')) {
+      const response: PyodideResponse = {
+        type: 'execution-cancelled',
+      }
+      self.postMessage(response)
+    } else {
+      const response: PyodideResponse = {
+        type: 'error',
+        error: errorString,
+      }
+      self.postMessage(response)
     }
-    self.postMessage(response)
   }
 }
 
 self.onmessage = async (event: MessageEvent<PyodideMessage>) => {
-  const { type, code } = event.data
+  const { type, code, buffer } = event.data
 
   switch (type) {
     case 'init':
@@ -144,6 +175,15 @@ self.onmessage = async (event: MessageEvent<PyodideMessage>) => {
       if (code) {
         await executeCode(code)
       }
+      break
+    case 'setInterruptBuffer':
+      if (buffer) {
+        setInterruptBuffer(buffer)
+      }
+      break
+    case 'cancel':
+      // This message is handled in the main thread, not here
+      // The main thread will set buffer[0] = 2 to trigger interruption
       break
   }
 }
