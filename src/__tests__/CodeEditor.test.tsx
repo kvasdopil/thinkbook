@@ -96,7 +96,7 @@ describe('CodeEditor', () => {
     )
   })
 
-  it('executes code and shows output', async () => {
+  it('executes code and shows streaming output', async () => {
     render(<CodeEditor />)
 
     // Wait for worker to be ready
@@ -112,16 +112,17 @@ describe('CodeEditor', () => {
     const runButton = screen.getByRole('button', { name: /run/i })
     fireEvent.click(runButton)
 
-    // Should show "Running..." in both button and output area
-    const runningElements = screen.getAllByText('Running...')
-    expect(runningElements.length).toBe(2) // Button and output
+    // Output should be cleared when execution starts
+    expect(
+      screen.queryByText('Python environment ready! 🐍')
+    ).not.toBeInTheDocument()
 
-    // Wait for mock result (our jest.setup.js mock returns "Mock output for: [code]")
+    // Wait for streaming output from default print statement
     await waitFor(
       () => {
-        expect(screen.getByText(/Mock output for:/)).toBeInTheDocument()
+        expect(screen.getByText('Hello, World!')).toBeInTheDocument()
       },
-      { timeout: 1000 }
+      { timeout: 1500 }
     )
   })
 
@@ -181,5 +182,136 @@ describe('CodeEditor', () => {
       'font-mono',
       'whitespace-pre-wrap'
     )
+  })
+
+  // New tests for streaming output functionality
+  it('streams multiple print statements progressively', async () => {
+    render(<CodeEditor />)
+
+    // Wait for worker to be ready
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText('Python environment ready! 🐍')
+        ).toBeInTheDocument()
+      },
+      { timeout: 1000 }
+    )
+
+    // Change code to have multiple print statements
+    const editor = screen.getByTestId('monaco-editor')
+    await userEvent.clear(editor)
+    await userEvent.type(
+      editor,
+      'print("First")\nprint("Second")\nprint("Third")'
+    )
+
+    const runButton = screen.getByRole('button', { name: /run/i })
+    fireEvent.click(runButton)
+
+    // Wait for all streaming outputs to appear
+    await waitFor(
+      () => {
+        expect(screen.getByText(/First/)).toBeInTheDocument()
+        expect(screen.getByText(/Second/)).toBeInTheDocument()
+        expect(screen.getByText(/Third/)).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
+  })
+
+  it('clears output when starting new execution', async () => {
+    render(<CodeEditor />)
+
+    // Wait for worker to be ready
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText('Python environment ready! 🐍')
+        ).toBeInTheDocument()
+      },
+      { timeout: 1000 }
+    )
+
+    const runButton = screen.getByRole('button', { name: /run/i })
+
+    // First execution
+    fireEvent.click(runButton)
+
+    // Wait for output
+    await waitFor(
+      () => {
+        expect(screen.getByText('Hello, World!')).toBeInTheDocument()
+      },
+      { timeout: 1500 }
+    )
+
+    // Wait for execution to complete
+    await waitFor(
+      () => {
+        expect(screen.getByRole('button', { name: /run/i })).not.toBeDisabled()
+      },
+      { timeout: 2000 }
+    )
+
+    // Second execution should clear previous output
+    fireEvent.click(runButton)
+
+    // Output should be cleared immediately
+    expect(screen.queryByText('Hello, World!')).not.toBeInTheDocument()
+  })
+
+  it('executes code without print statements', async () => {
+    render(<CodeEditor />)
+
+    // Wait for worker to be ready
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText('Python environment ready! 🐍')
+        ).toBeInTheDocument()
+      },
+      { timeout: 1000 }
+    )
+
+    // Change code to have no print statements
+    const editor = screen.getByTestId('monaco-editor')
+    await userEvent.clear(editor)
+    await userEvent.type(editor, 'x = 5\ny = 10\nz = x + y')
+
+    const runButton = screen.getByRole('button', { name: /run/i })
+    fireEvent.click(runButton)
+
+    // Should complete execution without any output
+    await waitFor(
+      () => {
+        expect(screen.getByRole('button', { name: /run/i })).not.toBeDisabled()
+      },
+      { timeout: 1500 }
+    )
+
+    // Output area should be empty - no print output should be visible
+    expect(screen.queryByText('5')).not.toBeInTheDocument()
+    expect(screen.queryByText('10')).not.toBeInTheDocument()
+  })
+
+  it('has scrollable output area with proper styling', async () => {
+    render(<CodeEditor />)
+
+    // Wait for initialization
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText('Python environment ready! 🐍')
+        ).toBeInTheDocument()
+      },
+      { timeout: 1000 }
+    )
+
+    // Check that output area has scrolling capabilities
+    const outputContainer = screen
+      .getByText('Python environment ready! 🐍')
+      .closest('div')
+    expect(outputContainer).toHaveClass('overflow-y-auto', 'max-h-96')
   })
 })

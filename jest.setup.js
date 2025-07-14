@@ -16,12 +16,57 @@ global.Worker = class {
         if (data.type === 'init') {
           this.onmessage({ data: { type: 'init-complete' } })
         } else if (data.type === 'execute') {
-          this.onmessage({
-            data: {
-              type: 'result',
-              result: `Mock output for: ${data.code}`,
-            },
-          })
+          // Simulate streaming output for print statements
+          const lines = data.code
+            .split('\n')
+            .filter((line) => line.trim().startsWith('print('))
+
+          if (lines.length > 0) {
+            // Send streaming output messages for each print statement
+            lines.forEach((line, index) => {
+              setTimeout(
+                () => {
+                  // Extract the content from print() calls
+                  const match = line.match(/print\((.*)\)/)
+                  const content = match
+                    ? match[1].replace(/['"]/g, '')
+                    : 'test output'
+
+                  this.onmessage({
+                    data: {
+                      type: 'output',
+                      output: {
+                        type: 'out',
+                        value: `${content}\n`,
+                      },
+                    },
+                  })
+                },
+                50 + index * 30
+              ) // Stagger the outputs
+            })
+
+            // Send completion message after all outputs
+            setTimeout(
+              () => {
+                this.onmessage({
+                  data: {
+                    type: 'result',
+                    result: '', // Empty result since output was streamed
+                  },
+                })
+              },
+              100 + lines.length * 30
+            )
+          } else {
+            // For code without print statements, just send completion
+            this.onmessage({
+              data: {
+                type: 'result',
+                result: '',
+              },
+            })
+          }
         }
       }
     }, 100)

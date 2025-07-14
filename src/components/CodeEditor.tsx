@@ -2,6 +2,7 @@
 
 import { Editor } from '@monaco-editor/react'
 import { useState, useRef, useEffect } from 'react'
+import type { PyodideMessage, PyodideResponse } from '../types/worker'
 
 interface CodeEditorProps {
   initialCode?: string
@@ -17,6 +18,20 @@ export default function CodeEditor({
   const [isLoading, setIsLoading] = useState(false)
   const [isWorkerReady, setIsWorkerReady] = useState(false)
   const workerRef = useRef<Worker | null>(null)
+  const outputRef = useRef<HTMLPreElement>(null)
+
+  // Auto-scroll helper function
+  const scrollToBottomIfNeeded = () => {
+    if (outputRef.current) {
+      const element = outputRef.current
+      const isAtBottom =
+        element.scrollHeight - element.scrollTop <= element.clientHeight + 1
+
+      if (isAtBottom) {
+        element.scrollTop = element.scrollHeight
+      }
+    }
+  }
 
   useEffect(() => {
     // Initialize web worker
@@ -25,32 +40,42 @@ export default function CodeEditor({
     )
     workerRef.current = worker
 
-    worker.onmessage = (event) => {
-      const { type, result, error } = event.data
+    worker.onmessage = (event: MessageEvent<PyodideResponse>) => {
+      const { type, error, output: streamOutput } = event.data
 
       switch (type) {
         case 'init-complete':
           setIsWorkerReady(true)
           setOutput('Python environment ready! 🐍')
           break
+        case 'output':
+          if (streamOutput) {
+            setOutput((prev) => prev + streamOutput.value)
+            // Use setTimeout to ensure DOM update before scrolling
+            setTimeout(scrollToBottomIfNeeded, 0)
+          }
+          break
         case 'result':
-          setOutput(result || '(no output)')
+          // Execution completed successfully
           setIsLoading(false)
           break
         case 'error':
-          setOutput(`Error: ${error}`)
+          setOutput((prev) => prev + `\nError: ${error}`)
           setIsLoading(false)
+          setTimeout(scrollToBottomIfNeeded, 0)
           break
       }
     }
 
     worker.onerror = (error) => {
-      setOutput(`Worker error: ${error.message}`)
+      setOutput((prev) => prev + `\nWorker error: ${error.message}`)
       setIsLoading(false)
+      setTimeout(scrollToBottomIfNeeded, 0)
     }
 
     // Initialize Pyodide
-    worker.postMessage({ type: 'init' })
+    const initMessage: PyodideMessage = { type: 'init' }
+    worker.postMessage(initMessage)
 
     return () => {
       worker.terminate()
@@ -70,8 +95,10 @@ export default function CodeEditor({
     }
 
     setIsLoading(true)
-    setOutput('Running...')
-    workerRef.current.postMessage({ type: 'execute', code })
+    setOutput('') // Clear output when starting execution
+
+    const executeMessage: PyodideMessage = { type: 'execute', code }
+    workerRef.current.postMessage(executeMessage)
   }
 
   return (
@@ -113,8 +140,11 @@ export default function CodeEditor({
         <div className="bg-gray-100 px-4 py-2 border-b border-gray-300">
           <h3 className="text-sm font-medium text-gray-700">Output</h3>
         </div>
-        <div className="p-4 bg-gray-50 min-h-32">
-          <pre className="text-sm font-mono whitespace-pre-wrap text-gray-800">
+        <div className="p-4 bg-gray-50 min-h-32 max-h-96 overflow-y-auto">
+          <pre
+            ref={outputRef}
+            className="text-sm font-mono whitespace-pre-wrap text-gray-800"
+          >
             {output}
           </pre>
         </div>
