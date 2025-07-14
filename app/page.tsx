@@ -245,6 +245,10 @@ print("All done!")`
     });
   };
 
+  // Convert output to string format for function calls
+  const outputString =
+    output.length > 0 ? output.map((line) => line.value).join("\n") : undefined;
+
   return (
     <main className="container mx-auto p-4 max-w-4xl">
       <h1 className="text-3xl font-bold mb-6 text-center">Jupyter Engine</h1>
@@ -269,6 +273,7 @@ print("All done!")`
           onStop={handleStopCode}
           executionState={executionState}
           isInitialized={isInitialized}
+          output={outputString}
         />
 
         {/* Control Buttons */}

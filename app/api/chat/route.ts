@@ -3,6 +3,7 @@ import { streamText } from "ai";
 import { NextRequest, NextResponse } from "next/server";
 import type { ChatMessage } from "../../../types/worker-messages";
 import { SYSTEM_PROMPT } from "../../../prompts/system-prompt";
+import { getAllFunctionMetadata } from "../../ai-functions";
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,11 +29,22 @@ export async function POST(request: NextRequest) {
     const systemPrompt = SYSTEM_PROMPT;
 
     // Initialize the model
-
     const google = createGoogleGenerativeAI({
       apiKey: process.env.GEMINI_API_KEY,
     });
     const model = google("gemini-2.5-flash");
+
+    // Get function metadata and create tools with Zod schemas
+    const functionMetadata = getAllFunctionMetadata();
+    const tools = Object.fromEntries(
+      functionMetadata.map((fn) => [
+        fn.name,
+        {
+          description: fn.description,
+          parameters: fn.parameters, // This is now a Zod schema
+        },
+      ])
+    );
 
     // Create the conversation with system prompt
     const conversationMessages = messages;
@@ -42,6 +54,7 @@ export async function POST(request: NextRequest) {
       model,
       system: systemPrompt,
       messages: conversationMessages,
+      tools,
       onError: (error) => {
         console.error("Chat API error:", error);
       },

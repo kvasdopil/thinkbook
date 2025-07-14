@@ -1,27 +1,109 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useChat } from "ai/react";
 import { FaPaperPlane, FaSpinner } from "react-icons/fa";
+import FunctionCallBalloon from "./FunctionCallBalloon";
+import {
+  listCellsImplementation,
+  listCellsSchema,
+} from "../app/ai-functions/listCells";
+import {
+  updateCellImplementation,
+  updateCellSchema,
+} from "../app/ai-functions/updateCell";
+import type { AIFunctionCall, CellData } from "../types/ai-functions";
 
 interface ChatInterfaceProps {
   className?: string;
+  cellData?: CellData;
+  onCellUpdate?: (text: string) => void;
 }
 
-export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
+export default function ChatInterface({
+  className = "",
+  cellData,
+  onCellUpdate,
+}: ChatInterfaceProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [functionCalls, setFunctionCalls] = useState<
+    Record<string, AIFunctionCall>
+  >({});
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, error } =
     useChat({
       api: "/api/chat",
       initialMessages: [],
+      onToolCall: async ({ toolCall }) => {
+        const functionCall: AIFunctionCall = {
+          id: toolCall.toolCallId,
+          name: toolCall.toolName,
+          parameters: toolCall.args as Record<string, unknown>,
+          status: "in-progress",
+        };
+
+        setFunctionCalls((prev) => ({
+          ...prev,
+          [toolCall.toolCallId]: functionCall,
+        }));
+
+        try {
+          let result;
+
+          if (toolCall.toolName === "listCells") {
+            // Validate parameters with Zod
+            const validatedParams = listCellsSchema.parse(toolCall.args);
+            result = await listCellsImplementation(validatedParams, () =>
+              cellData ? [cellData] : []
+            );
+          } else if (toolCall.toolName === "updateCell") {
+            // Validate parameters with Zod
+            const validatedParams = updateCellSchema.parse(toolCall.args);
+            result = await updateCellImplementation(
+              validatedParams,
+              (id: number, text: string) => {
+                if (onCellUpdate && cellData?.id === id) {
+                  onCellUpdate(text);
+                }
+              }
+            );
+          } else {
+            throw new Error(`Unknown function: ${toolCall.toolName}`);
+          }
+
+          setFunctionCalls((prev) => ({
+            ...prev,
+            [toolCall.toolCallId]: {
+              ...prev[toolCall.toolCallId],
+              status: "success",
+              result,
+            },
+          }));
+
+          return result;
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+
+          setFunctionCalls((prev) => ({
+            ...prev,
+            [toolCall.toolCallId]: {
+              ...prev[toolCall.toolCallId],
+              status: "failure",
+              error: errorMessage,
+            },
+          }));
+
+          throw error;
+        }
+      },
     });
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, functionCalls]);
 
   // Handle textarea auto-resize
   useEffect(() => {
@@ -59,32 +141,47 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
     <div className={`border rounded-lg bg-white ${className}`}>
       {/* Chat History */}
       <div className="h-48 sm:h-64 overflow-y-auto p-3 sm:p-4 border-b bg-gray-50">
-        {messages.length === 0 ? (
+        {messages.length === 0 && Object.keys(functionCalls).length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-500 text-sm">
             Ask me anything about your code or programming in general!
           </div>
         ) : (
           <div className="space-y-4">
             {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
+              <div key={index} className="space-y-2">
                 <div
-                  className={`max-w-[85%] sm:max-w-[80%] px-3 sm:px-4 py-2 rounded-lg ${
-                    message.role === "user"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-800"
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <div className="text-sm whitespace-pre-wrap">
-                    {message.content}
+                  <div
+                    className={`max-w-[85%] sm:max-w-[80%] px-3 sm:px-4 py-2 rounded-lg ${
+                      message.role === "user"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-800"
+                    }`}
+                  >
+                    <div className="text-sm whitespace-pre-wrap">
+                      {message.content}
+                    </div>
                   </div>
                 </div>
+
+                {/* Render function calls for this message */}
+                {message.toolInvocations &&
+                  message.toolInvocations.map((toolInvocation) => {
+                    const functionCall =
+                      functionCalls[toolInvocation.toolCallId];
+                    return functionCall ? (
+                      <FunctionCallBalloon
+                        key={toolInvocation.toolCallId}
+                        functionCall={functionCall}
+                      />
+                    ) : null;
+                  })}
               </div>
             ))}
+
             {isLoading && (
               <div className="flex justify-start">
                 <div className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">

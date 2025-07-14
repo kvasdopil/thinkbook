@@ -83,3 +83,20 @@
   - **Integration** Chat panel rendered above each `CodeCell` without affecting execution engine
   - **Error handling** for missing API key, rate limits, or SDK failures with safe JSON responses
   - **Mobile-friendly** layout and accessibility considerations remain intact
+
+- 0007.AI_FUNCTION_CALLS.md – AI agent function calls implemented for direct notebook cell interaction. Highlights:
+
+  - **Function architecture** with `app/ai-functions/` directory where each function lives in its own file
+  - **Function metadata** exported from server (name, description, parameters schema) with frontend implementations
+  - **Initial functions** `listCells` and `updateCell` with proper TypeScript interfaces and parameter validation
+  - **Function registry** in `app/ai-functions/index.ts` for centralized function management
+  - **API integration** updated `/api/chat` route to support tools parameter with Vercel AI SDK
+  - **Function call balloons** rendered as separate conversation elements with status-based styling
+  - **Status indicators** color-coded balloons (blue=in-progress, green=success, red=failure, orange=cancelled)
+  - **Real-time execution** functions execute on frontend with immediate UI feedback and status updates
+  - **Cell integration** CodeCell component provides cell data and handles updates from function calls
+  - **Output integration** main page passes formatted output string to enable function access to execution results
+  - **Extensible design** adding new functions requires only creating a new file in `app/ai-functions/`
+  - **Type safety** shared TypeScript types in `types/ai-functions.ts` for consistent interfaces
+  - **Error handling** function failures display in red balloons with error messages
+  - **One-by-one execution** functions called sequentially as specified in requirements

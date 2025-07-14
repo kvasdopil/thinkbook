@@ -13,6 +13,7 @@ import {
   FaSpinner,
 } from "react-icons/fa";
 import ChatInterface from "./ChatInterface";
+import type { CellData } from "../types/ai-functions";
 
 export enum ExecutionState {
   NEW = "new",
@@ -30,6 +31,7 @@ interface CodeCellProps {
   executionState: ExecutionState;
   disabled?: boolean;
   isInitialized?: boolean;
+  output?: string;
 }
 
 // Extract top-level comment from Python code
@@ -114,6 +116,7 @@ export default function CodeCell({
   executionState,
   disabled = false,
   isInitialized = false,
+  output,
 }: CodeCellProps) {
   const [isCodeVisible, setIsCodeVisible] = useState(false); // Default: hidden
   const [isStatusHovered, setIsStatusHovered] = useState(false);
@@ -141,10 +144,23 @@ export default function CodeCell({
     setIsCodeVisible(!isCodeVisible);
   };
 
+  // Create cell data for function calls
+  const cellData: CellData = {
+    id: 0, // For MVP, we have exactly one cell
+    type: "code",
+    text: code,
+    output: output,
+  };
+
+  // Handle cell updates from AI function calls
+  const handleCellUpdate = (newText: string) => {
+    onChange(newText);
+  };
+
   return (
     <div className="space-y-4">
       {/* Chat Interface */}
-      <ChatInterface />
+      <ChatInterface cellData={cellData} onCellUpdate={handleCellUpdate} />
 
       {/* Code Cell */}
       <div className="border rounded-lg overflow-hidden">
