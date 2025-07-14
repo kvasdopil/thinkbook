@@ -8,6 +8,7 @@
 
 - User stories are located in /docs/user-stories
 - When creating a new user story put it in a separate file with a next available number.
+- ALWAYS run tests and lint after finishing the task to make sure it is really complete
 
 # Directory structure
 
@@ -20,4 +21,4 @@
 
 # Implemented user-stories
 
-- none yet
+- **0001.APP.md**: Set up a minimal Next.js application with TypeScript, Tailwind CSS, ESLint, Prettier, and Jest. The application displays a "Hello World" message on the main page and has a basic project structure with a `src` directory.
