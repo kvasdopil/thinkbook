@@ -34,10 +34,10 @@ Follow **exactly** the Markdown layout shown below. Replace every {{placeholder}
 
 ## Definition of Done
 
-- [ ] All acceptance criteria are met
-- [ ] Unit / integration tests pass
-- [ ] Lint & type-check succeed
-- [ ] Documentation (README, Storybook, etc.) is updated
+- All acceptance criteria are met
+- Unit / integration tests pass
+- Lint & type-check succeed
+- Documentation (README, Storybook, etc.) is updated
 
 ---
 
@@ -86,10 +86,14 @@ Many users prefer dark mode to reduce eye strain and improve battery life on OLE
 
 ## Definition of Done
 
-- [ ] All criteria satisfied
-- [ ] New E2E test passes in Playwright
+- All criteria satisfied
+- New E2E test passes in Playwright
 ````
 
 ---
 
 Keep this document up-to-date if formatting rules evolve.
+
+We do not need to estimate tasks or track completion in a user-story, just formulate the requirements and include details that essential for the task.
+
+Make sure to write unit tests and integration tests for the code.
