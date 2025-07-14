@@ -46,3 +46,17 @@
   - Read-only editor during code execution
   - Comprehensive test coverage for toggle and status functionality
   - Responsive design for mobile and desktop viewports (≥320px width)
+
+- **0006.AI_CHAT.md**: Implemented AI chat functionality for real-time assistance while working with code cells. Added streaming AI responses using Gemini 2.0 Flash model via Vercel AI SDK. The implementation includes:
+  - Chat component positioned directly above the code cell with multi-line textarea and send button
+  - Real-time streaming AI responses from `/api/chat` endpoint using Google Generative AI
+  - Keyboard shortcuts: Enter to send, Shift/Ctrl/⌘+Enter for new lines
+  - User messages appear immediately with "sending..." state during API calls
+  - Auto-scrolling chat history with chronological message display (oldest to newest)
+  - Visual differentiation between user (blue) and assistant (gray) messages
+  - Auto-resizing textarea that expands with content
+  - Session-based conversation persistence (preserved for page duration)
+  - Comprehensive error handling for missing API keys and network issues
+  - System prompt optimized for Python/Jupyter assistance with practical coding guidance
+  - Full test coverage including streaming responses, keyboard interactions, and error scenarios
+  - Clean integration with existing CodeEditor component UI patterns

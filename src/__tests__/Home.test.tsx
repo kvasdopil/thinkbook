@@ -29,11 +29,19 @@ describe('Home', () => {
     expect(heading).toBeInTheDocument()
   })
 
-  it('renders the code editor component', () => {
+  it('renders the code editor and chat components', () => {
     render(<Home />)
 
-    // Check for editor elements
-    expect(screen.getByText('Python Editor')).toBeInTheDocument()
+    // Check for chat component
+    expect(screen.getByText('AI Assistant')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Ask me anything about Python, data analysis, or programming concepts!'
+      )
+    ).toBeInTheDocument()
+
+    // Check for code editor elements (code is hidden by default)
+    expect(screen.getByText('Write your Python code here')).toBeInTheDocument()
     expect(screen.getByText('Output')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument()
   })

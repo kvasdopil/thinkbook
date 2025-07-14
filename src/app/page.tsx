@@ -1,4 +1,5 @@
 import CodeEditor from '@/components/CodeEditor'
+import Chat from '@/components/Chat'
 
 export default function Home() {
   return (
@@ -7,6 +8,7 @@ export default function Home() {
         <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
           Jupyter Engine - Python in Browser
         </h1>
+        <Chat />
         <CodeEditor />
       </div>
     </main>

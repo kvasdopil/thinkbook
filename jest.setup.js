@@ -1,5 +1,21 @@
 import '@testing-library/jest-dom'
 
+// Mock scrollIntoView
+HTMLElement.prototype.scrollIntoView = jest.fn()
+
+// Mock TextEncoder/TextDecoder for streaming tests
+global.TextEncoder = class TextEncoder {
+  encode(input) {
+    return new Uint8Array(Buffer.from(input, 'utf8'))
+  }
+}
+
+global.TextDecoder = class TextDecoder {
+  decode(input) {
+    return Buffer.from(input).toString('utf8')
+  }
+}
+
 // Mock Worker
 global.Worker = class MockWorker {
   onmessage = null
