@@ -9,7 +9,8 @@ import type { PyodideResponse } from '@/types/worker'
 import ConversationList from '@/components/ConversationList'
 import FixedChatInput from '@/components/FixedChatInput'
 import { executeUpdateCell } from '@/ai-functions/update-cell'
-import type { UpdateCellParams } from '@/ai-functions'
+import { executeCreateCodeCell } from '@/ai-functions/create-code-cell'
+import type { UpdateCellParams, CreateCodeCellParams } from '@/ai-functions'
 
 export default function Home() {
   // Cells state - only store cells, not messages
@@ -27,43 +28,56 @@ export default function Home() {
   const runningCellRef = useRef<string | null>(null)
 
   // AI Chat integration
-  const { messages, input, setInput, handleSubmit, isLoading } = useChat({
-    api: '/api/chat',
-    maxSteps: 5,
-    async onToolCall({ toolCall }) {
-      try {
-        let result: unknown
+  const { status, messages, input, setInput, handleSubmit, isLoading } =
+    useChat({
+      api: '/api/chat',
+      maxSteps: 5,
+      async onToolCall({ toolCall }) {
+        try {
+          let result: unknown
 
-        if (toolCall.toolName === 'listCells') {
-          // Get current cells
-          result = cells.map((cell) => ({
-            id: cell.id,
-            type: 'code',
-            text: cell.text,
-            output: cell.output || '',
-          }))
-        } else if (toolCall.toolName === 'updateCell') {
-          const params = toolCall.args as UpdateCellParams
-          result = await executeUpdateCell(params, {
-            onCellCodeChange: (text: string) => {
-              setCells((prev) =>
-                prev.map((cell) =>
-                  cell.id === params.id ? { ...cell, text } : cell
+          if (toolCall.toolName === 'listCells') {
+            // Get current cells
+            result = cells.map((cell) => ({
+              id: cell.id,
+              type: 'code',
+              text: cell.text,
+              output: cell.output || '',
+            }))
+          } else if (toolCall.toolName === 'updateCell') {
+            const params = toolCall.args as UpdateCellParams
+            result = await executeUpdateCell(params, {
+              onCellCodeChange: (text: string) => {
+                setCells((prev) =>
+                  prev.map((cell) =>
+                    cell.id === params.id ? { ...cell, text } : cell
+                  )
                 )
-              )
-            },
-            currentCellId: params.id,
-          })
-        } else {
-          throw new Error(`Unknown function: ${toolCall.toolName}`)
-        }
+              },
+              currentCellId: params.id,
+            })
+          } else if (toolCall.toolName === 'createCodeCell') {
+            const params = toolCall.args as CreateCodeCellParams
+            result = await executeCreateCodeCell(params, {
+              onCreateCell: (text: string) => {
+                const newId = `cell-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+                // Use the toolCallId as the parentId to link the cell to this tool call
+                const newCell = createNewCell(newId, toolCall.toolCallId)
+                newCell.text = text
+                setCells((prev) => [...prev, newCell])
+              },
+              currentMessageId: toolCall.toolCallId,
+            })
+          } else {
+            throw new Error(`Unknown function: ${toolCall.toolName}`)
+          }
 
-        return result
-      } catch (error) {
-        throw error
-      }
-    },
-  })
+          return result
+        } catch (error) {
+          throw error
+        }
+      },
+    })
 
   // Derived conversation items - combine live messages with cells
   const conversationItems: ConversationItem[] = useMemo(() => {
@@ -81,8 +95,8 @@ export default function Home() {
       return items
     }
 
-    // Add unlinked cells first (linkedMessageId = null)
-    const unlinkedCells = cells.filter((cell) => cell.linkedMessageId === null)
+    // Add unlinked cells first (parentId = null)
+    const unlinkedCells = cells.filter((cell) => cell.parentId === null)
     unlinkedCells.forEach((cell, index) => {
       items.push({
         type: 'cell',
@@ -101,9 +115,7 @@ export default function Home() {
       })
 
       // Add cells linked to this message immediately after it
-      const linkedCells = cells.filter(
-        (cell) => cell.linkedMessageId === message.id
-      )
+      const linkedCells = cells.filter((cell) => cell.parentId === message.id)
       linkedCells.forEach((cell, cellIndex) => {
         items.push({
           type: 'cell',
@@ -111,6 +123,25 @@ export default function Home() {
           timestamp: messageIndex * 10 + cellIndex + 1,
         })
       })
+
+      // Add cells created by tool calls within this message
+      if (message.parts) {
+        message.parts.forEach((part) => {
+          if (part.type === 'tool-invocation') {
+            const toolCallId = part.toolInvocation.toolCallId
+            const toolCreatedCells = cells.filter(
+              (cell) => cell.parentId === toolCallId
+            )
+            toolCreatedCells.forEach((cell, cellIndex) => {
+              items.push({
+                type: 'cell',
+                data: cell,
+                timestamp: messageIndex * 10 + cellIndex + 5, // After regular linked cells
+              })
+            })
+          }
+        })
+      }
     })
 
     return items
@@ -370,6 +401,7 @@ export default function Home() {
         sharedArrayBufferSupported={sharedArrayBufferSupported}
         isLoading={isLoading}
       />
+      {status}
 
       {/* Fixed Chat Input */}
       <FixedChatInput

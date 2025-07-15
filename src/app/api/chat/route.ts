@@ -34,6 +34,10 @@ export async function POST(req: Request) {
           description: AI_FUNCTIONS.updateCell.description,
           parameters: AI_FUNCTIONS.updateCell.parameters,
         },
+        createCodeCell: {
+          description: AI_FUNCTIONS.createCodeCell.description,
+          parameters: AI_FUNCTIONS.createCodeCell.parameters,
+        },
       },
     })
 

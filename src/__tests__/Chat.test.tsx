@@ -24,7 +24,7 @@ describe('Chat', () => {
       output: 'Test output',
       isCodeVisible: false,
       executionStatus: 'idle',
-      linkedMessageId: null,
+      parentId: null,
     },
   ]
 

@@ -13,13 +13,21 @@ interface MessageItemProps {
 }
 
 export default function MessageItem({ message }: MessageItemProps) {
-  const renderItems: React.ReactNode[] = []
+  let renderItems: React.ReactNode[] = []
+
+  if (
+    message.parts &&
+    message.parts.length === 1 &&
+    message.parts[0].type === 'step-start'
+  ) {
+    return <div className="text-sm text-gray-500">_</div>
+  }
 
   // Always use message.parts array to maintain chronological order
   if (message.parts && message.parts.length > 0) {
-    message.parts.forEach((part, index) => {
+    renderItems = message.parts.map((part, index) => {
       if (part.type === 'text' && part.text) {
-        renderItems.push(
+        return (
           <div
             key={`text-${index}`}
             className={`flex ${
@@ -37,10 +45,12 @@ export default function MessageItem({ message }: MessageItemProps) {
             </div>
           </div>
         )
-      } else if (part.type === 'tool-invocation') {
+      }
+
+      if (part.type === 'tool-invocation') {
         // Use the part directly as it already has the correct ToolInvocationPart structure
         const toolPart = part as ToolInvocationPart
-        renderItems.push(
+        return (
           <ToolCallDisplay
             key={`tool-${index}-${toolPart.toolInvocation.toolCallId}`}
             part={toolPart}
