@@ -91,3 +91,5 @@
   - **Test Coverage**: Updated all tests to work with multi-cell architecture
   - **Real-time Updates**: Live output streaming and execution state updates per cell
   - **Sequential Execution**: "Run All" executes cells in order, waiting for each to complete before starting the next
+
+- **AI Tool Call Rendering Fix**: Fixed the chronological ordering issue in AI chat where tool calls were rendered after subsequent AI responses. Completely eliminated usage of `message.content`, `message.toolInvocations`, and all external function call state management, implementing a pure `message.parts`-only approach. All text, tool call data, status, results, and errors are now extracted directly from the parts array, ensuring perfect chronological order with zero redundant state. This ultra-clean architecture uses a single rendering loop with no external dependencies, guaranteeing that tool calls and responses appear in their exact natural conversation flow. The `ToolCallDisplay` component now receives only the part object and extracts all necessary information directly from it, eliminating any need for separate state tracking.

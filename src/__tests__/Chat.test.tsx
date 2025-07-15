@@ -64,8 +64,26 @@ describe('Chat', () => {
 
   it('displays messages when provided', () => {
     const mockMessages = [
-      { id: '1', role: 'user', content: 'Hello' },
-      { id: '2', role: 'assistant', content: 'Hi there!' },
+      {
+        id: '1',
+        role: 'user',
+        parts: [
+          {
+            type: 'text',
+            text: 'Hello',
+          },
+        ],
+      },
+      {
+        id: '2',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'text',
+            text: 'Hi there!',
+          },
+        ],
+      },
     ]
     mockUseChat.mockReturnValue({
       messages: mockMessages,

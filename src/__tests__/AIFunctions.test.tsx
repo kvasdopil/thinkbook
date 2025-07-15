@@ -51,7 +51,22 @@ describe('AI Functions', () => {
       {
         id: '1',
         role: 'assistant',
-        content: 'I can help you with that.',
+        parts: [
+          {
+            type: 'text',
+            text: 'I can help you with that.',
+          },
+          {
+            type: 'tool-invocation',
+            toolInvocation: {
+              toolCallId: 'call-1',
+              toolName: 'listCells',
+              args: {},
+              state: 'result',
+              result: 'Function executed successfully',
+            },
+          },
+        ],
         toolInvocations: [
           {
             toolCallId: 'call-1',
