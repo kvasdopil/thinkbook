@@ -3,6 +3,8 @@
 import React from 'react'
 import { Message } from 'ai/react'
 import ToolCallDisplay from './ToolCallDisplay'
+import ReactMarkdown from 'react-markdown'
+import { MarkdownComponents } from './MarkdownComponents'
 
 // Type for message parts from AI SDK
 type MessagePart = NonNullable<Message['parts']>[number]
@@ -38,10 +40,15 @@ export default function MessageItem({ message }: MessageItemProps) {
               className={`max-w-[80%] rounded-lg px-3 py-2 ${
                 message.role === 'user'
                   ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-800'
+                  // AI responses should have a transparent background and no border
+                  : 'bg-transparent text-gray-800'
               }`}
             >
-              <div className="text-sm whitespace-pre-wrap">{part.text}</div>
+              <div className="text-sm">
+                <ReactMarkdown components={MarkdownComponents}>
+                  {part.text}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
         )
