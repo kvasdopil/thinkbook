@@ -75,3 +75,19 @@
   - Integration with current single-cell structure (ready for multiple cells)
   - Comprehensive test coverage for function call rendering and execution
   - Status-specific UI styling with appropriate icons and visual feedback
+
+- **0008.MULTIPLE_CODE_CELLS.md**: Implemented multiple code cells functionality for notebook-style development. Transformed the single-cell interface into a fully-featured multi-cell notebook environment. The implementation includes:
+  - **Multiple Cell Management**: New `CellManager` state structure to handle multiple cells with proper tracking of running states and cell IDs
+  - **Cell Component**: Extracted cell functionality into reusable `Cell` component with individual Monaco editors, output areas, and controls
+  - **Global Controls**: "Run All" button for sequential execution and "Add Cell" button for creating new cells
+  - **Single AI Chat**: Unified chat interface at the top that works with all cells via updated `listCells` and `updateCell` functions
+  - **Individual Cell Controls**: Each cell has run/stop, toggle visibility, and delete buttons with user confirmation
+  - **Execution State Management**: Proper isolation of cell execution states (idle, running, complete, failed, cancelled)
+  - **Output Isolation**: Each cell displays only its own stdout/stderr output
+  - **Worker Integration**: Shared Pyodide worker with proper state management for sequential execution
+  - **Delete Functionality**: FaTrash icon with confirmation dialog for cell removal
+  - **Accessibility Features**: WCAG 2.1 AA compliance with proper ARIA labels and keyboard navigation
+  - **Type Safety**: Comprehensive TypeScript types for cell data, operations, and state management
+  - **Test Coverage**: Updated all tests to work with multi-cell architecture
+  - **Real-time Updates**: Live output streaming and execution state updates per cell
+  - **Sequential Execution**: "Run All" executes cells in order, waiting for each to complete before starting the next

@@ -180,7 +180,7 @@ const ChatInput = ({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Ask a question... (Enter to send, Shift+Enter for new line)"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="text-black w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           rows={1}
           disabled={isLoading}
         />
@@ -212,17 +212,12 @@ const ChatHeader = () => (
 )
 
 interface ChatProps {
-  // Props for accessing cell state - will be passed from parent component
-  cellCode?: string
-  cellOutput?: string
-  onCellCodeChange?: (code: string) => void
+  // Props for accessing multiple cells
+  cells: CellData[]
+  onCellUpdate: (id: string, updates: Partial<CellData>) => void
 }
 
-export default function Chat({
-  cellCode = '# Write your Python code here\nprint("Hello, World!")',
-  cellOutput = 'Python environment ready! 🐍',
-  onCellCodeChange,
-}: ChatProps) {
+export default function Chat({ cells, onCellUpdate }: ChatProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [functionCalls, setFunctionCalls] = useState<
@@ -251,22 +246,27 @@ export default function Chat({
         let result: unknown
 
         if (toolCall.toolName === 'listCells') {
-          // Execute listCells with current cell data
-          const cellData: CellData[] = [
-            {
-              id: 'cell-1',
-              type: 'code',
-              text: cellCode,
-              output: cellOutput,
-            },
-          ]
-          result = cellData
+          // Execute listCells with current cells data
+          result = cells.map((cell) => ({
+            id: cell.id,
+            type: cell.type,
+            text: cell.text,
+            output: cell.output,
+          }))
         } else if (toolCall.toolName === 'updateCell') {
           // Execute updateCell using the function from the file
           const params = toolCall.args as UpdateCellParams
+          const targetCell = cells.find((cell) => cell.id === params.id)
+
+          if (!targetCell) {
+            throw new Error(`Cell with ID "${params.id}" not found`)
+          }
+
           result = await executeUpdateCell(params, {
-            onCellCodeChange,
-            currentCellId: 'cell-1',
+            onCellCodeChange: (code: string) => {
+              onCellUpdate(params.id, { text: code })
+            },
+            currentCellId: params.id,
           })
         } else {
           throw new Error(`Unknown function: ${toolCall.toolName}`)
@@ -340,26 +340,24 @@ export default function Chat({
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 space-y-4">
-      <div className="border border-gray-300 rounded-lg overflow-hidden">
-        <ChatHeader />
+    <div className="border border-gray-300 rounded-lg overflow-hidden">
+      <ChatHeader />
 
-        <MessageList
-          messages={messages}
-          isLoading={isLoading}
-          functionCalls={functionCalls}
-          messagesEndRef={messagesEndRef}
-        />
+      <MessageList
+        messages={messages}
+        isLoading={isLoading}
+        functionCalls={functionCalls}
+        messagesEndRef={messagesEndRef}
+      />
 
-        <ChatInput
-          input={input}
-          isLoading={isLoading}
-          handleInputChange={handleInputChange}
-          onSubmit={onSubmit}
-          handleKeyDown={handleKeyDown}
-          textareaRef={textareaRef}
-        />
-      </div>
+      <ChatInput
+        input={input}
+        isLoading={isLoading}
+        handleInputChange={handleInputChange}
+        onSubmit={onSubmit}
+        handleKeyDown={handleKeyDown}
+        textareaRef={textareaRef}
+      />
     </div>
   )
 }
