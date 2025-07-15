@@ -18,11 +18,13 @@ type ExecutionStatus = 'idle' | 'running' | 'complete' | 'failed' | 'cancelled'
 interface CodeEditorProps {
   initialCode?: string
   onCodeChange?: (code: string) => void
+  onOutputChange?: (output: string) => void
 }
 
 export default function CodeEditor({
   initialCode = '# Write your Python code here\nprint("Hello, World!")',
   onCodeChange,
+  onOutputChange,
 }: CodeEditorProps) {
   const [code, setCode] = useState(initialCode)
   const [output, setOutput] = useState('')
@@ -72,6 +74,20 @@ export default function CodeEditor({
     }
   }
 
+  // Sync internal code state with external initialCode prop
+  useEffect(() => {
+    setCode(initialCode)
+  }, [initialCode])
+
+  // Use ref to capture latest onOutputChange without causing re-renders
+  const onOutputChangeRef = useRef(onOutputChange)
+  onOutputChangeRef.current = onOutputChange
+
+  // Sync output changes with parent component (deferred to avoid setState during render)
+  useEffect(() => {
+    onOutputChangeRef.current?.(output)
+  }, [output])
+
   useEffect(() => {
     // Check SharedArrayBuffer support
     const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined'
@@ -84,12 +100,15 @@ export default function CodeEditor({
     workerRef.current = worker
 
     worker.onmessage = (event: MessageEvent<PyodideResponse>) => {
+      console.log('[Main] Received message from worker:', event.data)
       const { type, error, output: streamOutput } = event.data
 
       switch (type) {
         case 'init-complete':
           setIsWorkerReady(true)
-          setOutput('Python environment ready! 🐍')
+          const initOutput = 'Python environment ready! 🐍'
+          setOutput(initOutput)
+          // onOutputChange moved to useEffect to avoid setState during render
 
           // Set up interrupt buffer if SharedArrayBuffer is supported
           if (hasSharedArrayBuffer) {
@@ -99,6 +118,7 @@ export default function CodeEditor({
               type: 'setInterruptBuffer',
               buffer,
             }
+            console.log('[Main] Sending message to worker:', setBufferMessage)
             worker.postMessage(setBufferMessage)
           }
           break
@@ -107,7 +127,11 @@ export default function CodeEditor({
           break
         case 'output':
           if (streamOutput) {
-            setOutput((prev) => prev + streamOutput.value)
+            setOutput((prev) => {
+              const newOutput = prev + streamOutput.value
+              // onOutputChange moved to useEffect to avoid setState during render
+              return newOutput
+            })
             // Use setTimeout to ensure DOM update before scrolling
             setTimeout(scrollToBottomIfNeeded, 0)
           }
@@ -147,6 +171,7 @@ export default function CodeEditor({
     }
 
     worker.onerror = (error) => {
+      console.log('[Main] Worker error:', error)
       setOutput((prev) => prev + `\nWorker error: ${error.message}`)
       setIsLoading(false)
       setIsStopping(false)
@@ -156,12 +181,13 @@ export default function CodeEditor({
 
     // Initialize Pyodide
     const initMessage: PyodideMessage = { type: 'init' }
+    console.log('[Main] Sending message to worker:', initMessage)
     worker.postMessage(initMessage)
 
     return () => {
       worker.terminate()
     }
-  }, [])
+  }, []) // Remove onOutputChange from dependencies to prevent worker restart on every render
 
   const handleCodeChange = (value: string | undefined) => {
     const newCode = value || ''
@@ -182,12 +208,20 @@ export default function CodeEditor({
     setIsLoading(true)
     setIsStopping(false)
     setExecutionStatus('running')
-    setOutput('') // Clear output when starting execution
+    setOutput('') // Clear output when starting execution - onOutputChange will fire via useEffect
+    // onOutputChange moved to useEffect to avoid setState during render
 
     const executeMessage: PyodideMessage = {
       type: 'execute',
       code,
     }
+    console.log('[Main] Sending message to worker:', {
+      ...executeMessage,
+      code: executeMessage.code
+        ? executeMessage.code.slice(0, 100) +
+          (executeMessage.code.length > 100 ? '...' : '')
+        : 'undefined',
+    })
     workerRef.current.postMessage(executeMessage)
   }
 
@@ -218,6 +252,9 @@ export default function CodeEditor({
     // This must be done in the main thread as the worker might be blocked
     const view = new Uint8Array(interruptBufferRef.current)
     view[0] = 2
+    console.log(
+      '[Main] Set interrupt signal in SharedArrayBuffer: buffer[0] = 2'
+    )
   }
 
   const toggleCodeVisibility = () => {

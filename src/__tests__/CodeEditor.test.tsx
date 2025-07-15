@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import CodeEditor from '../components/CodeEditor'
+import { useState, useCallback } from 'react'
 
 // Mock Monaco Editor
 jest.mock('@monaco-editor/react', () => ({
@@ -321,5 +322,288 @@ describe('CodeEditor', () => {
     // Note: We can't easily simulate the actual cancellation in tests
     // without a more complex mock setup, but we can verify the UI structure
     // The main functionality is tested in other tests
+  })
+
+  it('should update code when initialCode prop changes', () => {
+    const { rerender } = render(<CodeEditor initialCode="print('first')" />)
+
+    // Show the code editor to see the value
+    const toggleButton = screen.getByLabelText(/show code editor/i)
+    fireEvent.click(toggleButton)
+
+    const editor = screen.getByTestId('monaco-editor')
+    expect(editor).toHaveValue("print('first')")
+
+    // Change the initialCode prop
+    rerender(<CodeEditor initialCode="print('second')" />)
+
+    expect(editor).toHaveValue("print('second')")
+  })
+
+  it('should not restart worker when parent re-renders with new callback references', async () => {
+    const mockTerminate = jest.fn()
+    const mockPostMessage = jest.fn()
+
+    // Track worker instances
+    const workerInstances: Worker[] = []
+
+    const MockWorkerConstructor = jest.fn().mockImplementation(() => {
+      const worker = {
+        onmessage: null as ((event: MessageEvent) => void) | null,
+        onerror: null as ((event: ErrorEvent) => void) | null,
+        postMessage: mockPostMessage,
+        terminate: mockTerminate,
+      }
+      workerInstances.push(worker as unknown as Worker)
+      return worker
+    })
+
+    // Override the Worker constructor
+    global.Worker = MockWorkerConstructor as unknown as typeof Worker
+
+    const TestParent = () => {
+      const [count, setCount] = useState(0)
+
+      // This creates a new function reference on every render
+      const handleOutputChange = (output: string) => {
+        console.log('Output:', output, 'Count:', count)
+      }
+
+      return (
+        <div>
+          <button onClick={() => setCount((c) => c + 1)}>Re-render</button>
+          <CodeEditor onOutputChange={handleOutputChange} />
+        </div>
+      )
+    }
+
+    render(<TestParent />)
+
+    // Wait for initial worker setup
+    await waitFor(() => {
+      expect(MockWorkerConstructor).toHaveBeenCalledTimes(1)
+    })
+
+    // Simulate worker being ready
+    const firstWorker = workerInstances[0] as unknown as {
+      onmessage: ((event: MessageEvent) => void) | null
+    }
+    act(() => {
+      if (firstWorker.onmessage) {
+        firstWorker.onmessage({
+          data: { type: 'init-complete' },
+        } as MessageEvent)
+      }
+    })
+
+    // Force parent re-render with new callback reference
+    const reRenderButton = screen.getByText('Re-render')
+    fireEvent.click(reRenderButton)
+    fireEvent.click(reRenderButton)
+    fireEvent.click(reRenderButton)
+
+    // Worker should NOT be recreated despite callback changes
+    expect(MockWorkerConstructor).toHaveBeenCalledTimes(1)
+    expect(mockTerminate).not.toHaveBeenCalled()
+    expect(workerInstances).toHaveLength(1)
+  })
+
+  it('should maintain execution state during parent re-renders', async () => {
+    const mockPostMessage = jest.fn()
+
+    interface MockWorker {
+      onmessage: ((event: MessageEvent) => void) | null
+      onerror: ((event: ErrorEvent) => void) | null
+      postMessage: jest.Mock
+      terminate: jest.Mock
+    }
+
+    const MockWorkerConstructor = jest.fn().mockImplementation(
+      (): MockWorker => ({
+        onmessage: null,
+        onerror: null,
+        postMessage: mockPostMessage,
+        terminate: jest.fn(),
+      })
+    )
+
+    global.Worker = MockWorkerConstructor as unknown as typeof Worker
+
+    const TestParent = () => {
+      const [rerenderCount, setRerenderCount] = useState(0)
+
+      // New function reference on every render
+      const handleOutputChange = useCallback(
+        (output: string) => {
+          console.log('Output received:', output)
+        },
+        [rerenderCount]
+      )
+
+      return (
+        <div>
+          <button onClick={() => setRerenderCount((c) => c + 1)}>
+            Force Re-render
+          </button>
+          <CodeEditor onOutputChange={handleOutputChange} />
+        </div>
+      )
+    }
+
+    render(<TestParent />)
+
+    // Get the mock worker instance
+    const mockWorker = MockWorkerConstructor.mock.results[0].value as MockWorker
+
+    // Initialize worker
+    await waitFor(() => {
+      expect(MockWorkerConstructor).toHaveBeenCalledTimes(1)
+    })
+
+    // Simulate worker ready
+    act(() => {
+      if (mockWorker.onmessage) {
+        mockWorker.onmessage({
+          data: { type: 'init-complete' },
+        } as MessageEvent)
+      }
+    })
+
+    // Start code execution
+    await waitFor(() => {
+      const statusButton = screen.getByLabelText(/run code execution/i)
+      expect(statusButton).not.toBeDisabled()
+    })
+
+    const statusButton = screen.getByLabelText(/run code execution/i)
+    fireEvent.click(statusButton)
+
+    // Verify execution started
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'execute' })
+    )
+
+    // Force parent re-render during execution
+    const reRenderButton = screen.getByText('Force Re-render')
+    fireEvent.click(reRenderButton)
+
+    // Simulate output arriving after re-render
+    act(() => {
+      if (mockWorker.onmessage) {
+        mockWorker.onmessage({
+          data: {
+            type: 'output',
+            output: { type: 'out', value: 'Hello from Python!\n' },
+          },
+        } as MessageEvent)
+      }
+    })
+
+    // Output should still appear despite re-render
+    await waitFor(() => {
+      expect(screen.getByText('Hello from Python!')).toBeInTheDocument()
+    })
+
+    // Complete execution
+    act(() => {
+      if (mockWorker.onmessage) {
+        mockWorker.onmessage({
+          data: { type: 'result', result: '' },
+        } as MessageEvent)
+      }
+    })
+
+    // Should show completion status
+    await waitFor(() => {
+      expect(screen.getByTestId('check-circle-icon')).toBeInTheDocument()
+    })
+  })
+
+  it('should not lose worker state when callback dependencies change', async () => {
+    const mockPostMessage = jest.fn()
+    const mockTerminate = jest.fn()
+
+    interface MockWorker {
+      onmessage: ((event: MessageEvent) => void) | null
+      onerror: ((event: ErrorEvent) => void) | null
+      postMessage: jest.Mock
+      terminate: jest.Mock
+    }
+
+    const MockWorkerConstructor = jest.fn().mockImplementation(
+      (): MockWorker => ({
+        onmessage: null,
+        onerror: null,
+        postMessage: mockPostMessage,
+        terminate: mockTerminate,
+      })
+    )
+
+    global.Worker = MockWorkerConstructor as unknown as typeof Worker
+
+    const TestWrapper = () => {
+      const [outputLog, setOutputLog] = useState<string[]>([])
+
+      // This creates a new function reference whenever outputLog changes
+      const handleOutputChange = (output: string) => {
+        setOutputLog((prev) => [...prev, output])
+      }
+
+      return (
+        <div>
+          <div data-testid="output-log">{outputLog.join(', ')}</div>
+          <CodeEditor onOutputChange={handleOutputChange} />
+        </div>
+      )
+    }
+
+    render(<TestWrapper />)
+
+    // Should create only one worker initially
+    expect(MockWorkerConstructor).toHaveBeenCalledTimes(1)
+
+    // Simulate some output changes that would trigger new callback references
+    const worker = MockWorkerConstructor.mock.results[0].value as MockWorker
+
+    act(() => {
+      if (worker.onmessage) {
+        worker.onmessage({ data: { type: 'init-complete' } } as MessageEvent)
+      }
+    })
+
+    // This will trigger handleOutputChange and create new callback reference
+    act(() => {
+      if (worker.onmessage) {
+        worker.onmessage({
+          data: {
+            type: 'output',
+            output: { type: 'out', value: 'First output\n' },
+          },
+        } as MessageEvent)
+      }
+    })
+
+    // Another output that creates another new callback reference
+    act(() => {
+      if (worker.onmessage) {
+        worker.onmessage({
+          data: {
+            type: 'output',
+            output: { type: 'out', value: 'Second output\n' },
+          },
+        } as MessageEvent)
+      }
+    })
+
+    // Worker should still be the same instance despite callback changes
+    expect(MockWorkerConstructor).toHaveBeenCalledTimes(1)
+    expect(mockTerminate).not.toHaveBeenCalled()
+
+    // Both outputs should be visible
+    await waitFor(() => {
+      const outputLog = screen.getByTestId('output-log')
+      expect(outputLog.textContent).toContain('First output')
+      expect(outputLog.textContent).toContain('Second output')
+    })
   })
 })

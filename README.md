@@ -60,3 +60,18 @@
   - System prompt optimized for Python/Jupyter assistance with practical coding guidance
   - Full test coverage including streaming responses, keyboard interactions, and error scenarios
   - Clean integration with existing CodeEditor component UI patterns
+
+- **0007.AI_FUNCTION_CALLS.md**: Implemented AI function calls for structured interaction with notebook cells. Added deterministic, auditable actions for reading and modifying code cells. The implementation includes:
+  - AI function calling via Vercel AI SDK with Zod schema validation
+  - `listCells()` function to get snapshot of all cells with ID, type, text content, and output
+  - `updateCell(id, text)` function to replace cell contents with new text
+  - Function call rendering as conversation balloons with status-colored backgrounds
+  - Status indicators: blue (in-progress), green (success), red (failure), orange (cancelled)
+  - Each function defined in separate files under `src/ai-functions/` directory
+  - Frontend function execution with backend metadata export pattern
+  - Real-time function call state management using `onToolCall` callback
+  - Multi-step conversation flow with `maxSteps: 5` enabling AI to continue after receiving function results
+  - Proper error handling and parameter validation with Zod schemas
+  - Integration with current single-cell structure (ready for multiple cells)
+  - Comprehensive test coverage for function call rendering and execution
+  - Status-specific UI styling with appropriate icons and visual feedback

@@ -1,6 +1,7 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { streamText } from 'ai'
 import { SYSTEM_PROMPT } from '@/prompts/system-prompt'
+import { AI_FUNCTIONS } from '@/ai-functions'
 
 const google = createGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -24,6 +25,16 @@ export async function POST(req: Request) {
       model: google('gemini-2.0-flash-exp'),
       system: SYSTEM_PROMPT,
       messages,
+      tools: {
+        listCells: {
+          description: AI_FUNCTIONS.listCells.description,
+          parameters: AI_FUNCTIONS.listCells.parameters,
+        },
+        updateCell: {
+          description: AI_FUNCTIONS.updateCell.description,
+          parameters: AI_FUNCTIONS.updateCell.parameters,
+        },
+      },
     })
 
     return result.toDataStreamResponse()

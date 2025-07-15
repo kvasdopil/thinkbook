@@ -18,12 +18,14 @@ async function initializePyodide() {
     const response: PyodideResponse = {
       type: 'init-complete',
     }
+    console.log('[Worker] Sending response:', response)
     self.postMessage(response)
   } catch (error) {
     const response: PyodideResponse = {
       type: 'error',
       error: `Failed to initialize Pyodide: ${error}`,
     }
+    console.log('[Worker] Sending error response:', response)
     self.postMessage(response)
   }
 }
@@ -37,12 +39,14 @@ function setInterruptBuffer(buffer: SharedArrayBuffer) {
     const response: PyodideResponse = {
       type: 'interrupt-buffer-set',
     }
+    console.log('[Worker] Sending response:', response)
     self.postMessage(response)
   } catch (error) {
     const response: PyodideResponse = {
       type: 'error',
       error: `Failed to set interrupt buffer: ${error}`,
     }
+    console.log('[Worker] Sending error response:', response)
     self.postMessage(response)
   }
 }
@@ -53,6 +57,7 @@ async function executeCode(code: string) {
       type: 'error',
       error: 'Pyodide not initialized',
     }
+    console.log('[Worker] Sending error response:', response)
     self.postMessage(response)
     return
   }
@@ -67,6 +72,7 @@ async function executeCode(code: string) {
           value: text,
         },
       }
+      console.log('[Worker] Sending output response:', response)
       self.postMessage(response)
     })
 
@@ -78,6 +84,7 @@ async function executeCode(code: string) {
           value: text,
         },
       }
+      console.log('[Worker] Sending error output response:', response)
       self.postMessage(response)
     })
 
@@ -130,6 +137,7 @@ sys.stderr.write = _streaming_stderr_write
         type: 'result',
         result: '', // Empty result since output was streamed
       }
+      console.log('[Worker] Sending result response:', response)
       self.postMessage(response)
     } finally {
       // Always restore original functions
@@ -153,35 +161,45 @@ sys.stderr.write = _original_stderr_write
       const response: PyodideResponse = {
         type: 'execution-cancelled',
       }
+      console.log('[Worker] Sending execution-cancelled response:', response)
       self.postMessage(response)
     } else {
       const response: PyodideResponse = {
         type: 'error',
         error: errorString,
       }
+      console.log('[Worker] Sending error response:', response)
       self.postMessage(response)
     }
   }
 }
 
 self.onmessage = async (event: MessageEvent<PyodideMessage>) => {
+  console.log('[Worker] Received message:', event.data)
   const { type, code, buffer } = event.data
 
   switch (type) {
     case 'init':
+      console.log('[Worker] Processing init message')
       await initializePyodide()
       break
     case 'execute':
       if (code) {
+        console.log(
+          '[Worker] Processing execute message with code:',
+          code.slice(0, 100) + (code.length > 100 ? '...' : '')
+        )
         await executeCode(code)
       }
       break
     case 'setInterruptBuffer':
       if (buffer) {
+        console.log('[Worker] Processing setInterruptBuffer message')
         setInterruptBuffer(buffer)
       }
       break
     case 'cancel':
+      console.log('[Worker] Received cancel message (handled in main thread)')
       // This message is handled in the main thread, not here
       // The main thread will set buffer[0] = 2 to trigger interruption
       break
