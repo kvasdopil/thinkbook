@@ -14,6 +14,7 @@ export interface CellData {
   output: string
   isCodeVisible: boolean
   executionStatus: ExecutionStatus
+  linkedMessageId: string | null // ID of the immediately preceding chat message (null if first item)
 }
 
 // Cell manager interface for managing multiple cells
@@ -35,7 +36,10 @@ export interface CellOperations {
 }
 
 // Helper function to create new cell
-export function createNewCell(id?: string): CellData {
+export function createNewCell(
+  id?: string,
+  linkedMessageId: string | null = null
+): CellData {
   return {
     id: id || `cell-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     type: 'code',
@@ -43,6 +47,7 @@ export function createNewCell(id?: string): CellData {
     output: '',
     isCodeVisible: false,
     executionStatus: 'idle',
+    linkedMessageId,
   }
 }
 

@@ -25,6 +25,7 @@ describe('AI Functions', () => {
       output: 'Test output',
       isCodeVisible: false,
       executionStatus: 'idle',
+      linkedMessageId: null,
     },
   ]
 

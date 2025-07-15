@@ -2,6 +2,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   toolInvocations?: ToolInvocation[]
+  messageId: string // Unique identifier for each message
 }
 
 export interface ToolInvocation {

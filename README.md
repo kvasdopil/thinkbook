@@ -93,3 +93,14 @@
   - **Sequential Execution**: "Run All" executes cells in order, waiting for each to complete before starting the next
 
 - **AI Tool Call Rendering Fix**: Fixed the chronological ordering issue in AI chat where tool calls were rendered after subsequent AI responses. Completely eliminated usage of `message.content`, `message.toolInvocations`, and all external function call state management, implementing a pure `message.parts`-only approach. All text, tool call data, status, results, and errors are now extracted directly from the parts array, ensuring perfect chronological order with zero redundant state. This ultra-clean architecture uses a single rendering loop with no external dependencies, guaranteeing that tool calls and responses appear in their exact natural conversation flow. The `ToolCallDisplay` component now receives only the part object and extracts all necessary information directly from it, eliminating any need for separate state tracking.
+
+- **0009.UNIFIED_CHAT_AND_NOTEBOOK.md**: Implemented the unified chat and notebook interface that merges AI chat messages and code cells into a single chronological conversation view. The implementation includes:
+  - **Unified Conversation Architecture**: Replaced separate chat and cell lists with a single `ConversationItem` array that maintains chronological order of messages and cells
+  - **Message and Cell Linking**: Added `messageId` to chat messages and `linkedMessageId` to cells, enabling proper context tracking between chat guidance and code execution
+  - **Full Viewport Layout**: Conversation occupies full height with `ConversationList` component handling scrolling, while `FixedChatInput` stays pinned at bottom
+  - **Seamless Integration**: AI function calls (`listCells`, `updateCell`) work seamlessly with the unified architecture, maintaining all existing functionality
+  - **New Component Architecture**: Created modular components including `ConversationList`, `ConversationItem`, `MessageItem`, `ToolCallDisplay`, and `FixedChatInput`
+  - **Enhanced User Experience**: Eliminates context switching between chat and cells, providing a notebook-style interface similar to Jupyter where conversation flows naturally
+  - **Preserved Functionality**: All existing features (cell execution, AI assistance, function calls, cancellation) work identically within the new unified interface
+  - **Type Safety**: Comprehensive TypeScript types for conversation items, proper AI SDK integration, and robust state management
+  - **Test Coverage**: Updated all existing tests to work with the new architecture while maintaining full functionality coverage

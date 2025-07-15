@@ -12,6 +12,8 @@ export interface PyodideResponse {
     | 'result'
     | 'error'
     | 'output'
+    | 'execution-complete'
+    | 'execution-error'
     | 'execution-cancelled'
     | 'interrupt-buffer-set'
     | 'shared-array-buffer-unavailable'

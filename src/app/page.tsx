@@ -1,19 +1,21 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { FaPlay, FaPlus } from 'react-icons/fa'
-import Cell from '@/components/Cell'
-import Chat from '@/components/Chat'
-import type { CellData, CellOperations, CellManager } from '@/types/cell'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { useChat } from 'ai/react'
+import type { CellData, CellOperations } from '@/types/cell'
 import { createNewCell } from '@/types/cell'
-import type { PyodideMessage, PyodideResponse } from '@/types/worker'
+import { ConversationItem } from '@/types/conversation'
+import type { PyodideResponse } from '@/types/worker'
+import ConversationList from '@/components/ConversationList'
+import FixedChatInput from '@/components/FixedChatInput'
+import { executeUpdateCell } from '@/ai-functions/update-cell'
+import type { UpdateCellParams } from '@/ai-functions'
 
 export default function Home() {
-  const [cellManager, setCellManager] = useState<CellManager>(() => ({
-    cells: [createNewCell('cell-1')],
-    isAnyRunning: false,
-    runningCellIds: new Set(),
-  }))
+  // Cells state - only store cells, not messages
+  const [cells, setCells] = useState<CellData[]>(() => [
+    createNewCell('cell-1'),
+  ])
 
   const [isWorkerReady, setIsWorkerReady] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
@@ -23,6 +25,102 @@ export default function Home() {
   const workerRef = useRef<Worker | null>(null)
   const interruptBufferRef = useRef<SharedArrayBuffer | null>(null)
   const runningCellRef = useRef<string | null>(null)
+
+  // AI Chat integration
+  const { messages, input, setInput, handleSubmit, isLoading } = useChat({
+    api: '/api/chat',
+    maxSteps: 5,
+    async onToolCall({ toolCall }) {
+      try {
+        let result: unknown
+
+        if (toolCall.toolName === 'listCells') {
+          // Get current cells
+          result = cells.map((cell) => ({
+            id: cell.id,
+            type: 'code',
+            text: cell.text,
+            output: cell.output || '',
+          }))
+        } else if (toolCall.toolName === 'updateCell') {
+          const params = toolCall.args as UpdateCellParams
+          result = await executeUpdateCell(params, {
+            onCellCodeChange: (text: string) => {
+              setCells((prev) =>
+                prev.map((cell) =>
+                  cell.id === params.id ? { ...cell, text } : cell
+                )
+              )
+            },
+            currentCellId: params.id,
+          })
+        } else {
+          throw new Error(`Unknown function: ${toolCall.toolName}`)
+        }
+
+        return result
+      } catch (error) {
+        throw error
+      }
+    },
+  })
+
+  // Derived conversation items - combine live messages with cells
+  const conversationItems: ConversationItem[] = useMemo(() => {
+    const items: ConversationItem[] = []
+
+    // Add initial cell if no messages yet
+    if (messages.length === 0) {
+      items.push({
+        type: 'cell',
+        data: cells[0],
+        timestamp: 0,
+      })
+      // Add remaining cells
+      for (let i = 1; i < cells.length; i++) {
+        items.push({
+          type: 'cell',
+          data: cells[i],
+          timestamp: i,
+        })
+      }
+      return items
+    }
+
+    let cellIndex = 0
+
+    // Interleave messages and cells chronologically
+    messages.forEach((message, messageIndex) => {
+      // Add the message (using live data from useChat)
+      items.push({
+        type: 'message',
+        data: message,
+        timestamp: messageIndex * 2,
+      })
+
+      // Add a cell after this message if we have one
+      if (cellIndex < cells.length) {
+        items.push({
+          type: 'cell',
+          data: cells[cellIndex],
+          timestamp: messageIndex * 2 + 1,
+        })
+        cellIndex++
+      }
+    })
+
+    // Add any remaining cells
+    while (cellIndex < cells.length) {
+      items.push({
+        type: 'cell',
+        data: cells[cellIndex],
+        timestamp: messages.length * 2 + cellIndex,
+      })
+      cellIndex++
+    }
+
+    return items
+  }, [messages, cells])
 
   // Initialize worker
   useEffect(() => {
@@ -37,7 +135,6 @@ export default function Home() {
     workerRef.current = worker
 
     worker.onmessage = (event: MessageEvent<PyodideResponse>) => {
-      console.log('[Main] Received message from worker:', event.data)
       const { type, error, output: streamOutput } = event.data
 
       switch (type) {
@@ -46,152 +143,104 @@ export default function Home() {
           const initOutput = 'Python environment ready! 🐍'
 
           // Update all cells with initial output
-          setCellManager((prev) => ({
-            ...prev,
-            cells: prev.cells.map((cell) => ({ ...cell, output: initOutput })),
-          }))
+          setCells((prev) =>
+            prev.map((cell) => ({ ...cell, output: initOutput }))
+          )
+          break
 
-          // Set up interrupt buffer if SharedArrayBuffer is supported
-          if (hasSharedArrayBuffer) {
-            const buffer = new SharedArrayBuffer(1) // 1 byte for interrupt signal
-            interruptBufferRef.current = buffer
-            const setBufferMessage: PyodideMessage = {
-              type: 'setInterruptBuffer',
-              buffer,
-            }
-            console.log('[Main] Sending message to worker:', setBufferMessage)
-            worker.postMessage(setBufferMessage)
-          }
-          break
-        case 'interrupt-buffer-set':
-          // Buffer successfully set up
-          break
         case 'output':
           if (streamOutput && runningCellRef.current) {
-            const cellId = runningCellRef.current
-            setCellManager((prev) => ({
-              ...prev,
-              cells: prev.cells.map((cell) =>
-                cell.id === cellId
-                  ? { ...cell, output: cell.output + streamOutput.value }
-                  : cell
-              ),
-            }))
-          }
-          break
-        case 'result':
-          // Execution completed successfully
-          if (runningCellRef.current) {
-            const cellId = runningCellRef.current
-            setCellManager((prev) => ({
-              ...prev,
-              cells: prev.cells.map((cell) =>
-                cell.id === cellId
-                  ? { ...cell, executionStatus: 'complete' }
-                  : cell
-              ),
-              isAnyRunning: false,
-              runningCellIds: new Set(),
-            }))
-            runningCellRef.current = null
-          }
-          setIsStopping(false)
-          break
-        case 'execution-cancelled':
-          if (runningCellRef.current) {
-            const cellId = runningCellRef.current
-            setCellManager((prev) => ({
-              ...prev,
-              cells: prev.cells.map((cell) =>
-                cell.id === cellId
-                  ? {
-                      ...cell,
-                      output: cell.output + '\nExecution interrupted by user\n',
-                      executionStatus: 'cancelled',
-                    }
-                  : cell
-              ),
-              isAnyRunning: false,
-              runningCellIds: new Set(),
-            }))
-            runningCellRef.current = null
-          }
-          setIsStopping(false)
-          break
-        case 'shared-array-buffer-unavailable':
-          if (runningCellRef.current) {
-            const cellId = runningCellRef.current
-            setCellManager((prev) => ({
-              ...prev,
-              cells: prev.cells.map((cell) =>
-                cell.id === cellId
+            const runningCellId = runningCellRef.current
+            setCells((prev) =>
+              prev.map((cell) =>
+                cell.id === runningCellId
                   ? {
                       ...cell,
                       output:
                         cell.output +
-                        '\nError: SharedArrayBuffer not supported. Cancellation unavailable.\n',
-                      executionStatus: 'failed',
+                        (streamOutput.type === 'err' ? '[ERROR] ' : '') +
+                        streamOutput.value,
                     }
                   : cell
-              ),
-              isAnyRunning: false,
-              runningCellIds: new Set(),
-            }))
-            runningCellRef.current = null
+              )
+            )
           }
-          setIsStopping(false)
           break
+
+        case 'result':
+          if (runningCellRef.current) {
+            const runningCellId = runningCellRef.current
+            setCells((prev) =>
+              prev.map((cell) =>
+                cell.id === runningCellId
+                  ? { ...cell, executionStatus: 'complete' }
+                  : cell
+              )
+            )
+            runningCellRef.current = null
+            setIsStopping(false)
+          }
+          break
+
         case 'error':
           if (runningCellRef.current) {
-            const cellId = runningCellRef.current
-            setCellManager((prev) => ({
-              ...prev,
-              cells: prev.cells.map((cell) =>
-                cell.id === cellId
+            const runningCellId = runningCellRef.current
+            setCells((prev) =>
+              prev.map((cell) =>
+                cell.id === runningCellId
                   ? {
                       ...cell,
-                      output: cell.output + `\nError: ${error}`,
                       executionStatus: 'failed',
+                      output: cell.output + `\n[ERROR] ${error}`,
                     }
                   : cell
-              ),
-              isAnyRunning: false,
-              runningCellIds: new Set(),
-            }))
+              )
+            )
             runningCellRef.current = null
+            setIsStopping(false)
           }
-          setIsStopping(false)
           break
+
+        case 'execution-cancelled':
+          if (runningCellRef.current) {
+            const runningCellId = runningCellRef.current
+            setCells((prev) =>
+              prev.map((cell) =>
+                cell.id === runningCellId
+                  ? {
+                      ...cell,
+                      executionStatus: 'cancelled',
+                      output: cell.output + '\n[CANCELLED] Execution stopped',
+                    }
+                  : cell
+              )
+            )
+            runningCellRef.current = null
+            setIsStopping(false)
+          }
+          break
+
+        case 'interrupt-buffer-set':
+          break
+
+        default:
+          console.warn('[Main] Unknown message type:', type)
       }
     }
 
-    worker.onerror = (error) => {
-      console.log('[Main] Worker error:', error)
-      if (runningCellRef.current) {
-        const cellId = runningCellRef.current
-        setCellManager((prev) => ({
-          ...prev,
-          cells: prev.cells.map((cell) =>
-            cell.id === cellId
-              ? {
-                  ...cell,
-                  output: cell.output + `\nWorker error: ${error.message}`,
-                  executionStatus: 'failed',
-                }
-              : cell
-          ),
-          isAnyRunning: false,
-          runningCellIds: new Set(),
-        }))
-        runningCellRef.current = null
-      }
-      setIsStopping(false)
+    worker.onerror = () => {
+      setIsWorkerReady(false)
     }
 
-    // Initialize Pyodide
-    const initMessage: PyodideMessage = { type: 'init' }
-    console.log('[Main] Sending message to worker:', initMessage)
-    worker.postMessage(initMessage)
+    // Initialize the worker
+    worker.postMessage({ type: 'init' })
+
+    // Set up SharedArrayBuffer for interruption if supported
+    if (hasSharedArrayBuffer) {
+      const buffer = new SharedArrayBuffer(1)
+      interruptBufferRef.current = buffer
+      worker.postMessage({ type: 'setInterruptBuffer', buffer })
+    }
 
     return () => {
       worker.terminate()
@@ -201,134 +250,66 @@ export default function Home() {
   // Cell operations
   const cellOperations: CellOperations = {
     updateCell: (id: string, updates: Partial<CellData>) => {
-      setCellManager((prev) => ({
-        ...prev,
-        cells: prev.cells.map((cell) =>
-          cell.id === id ? { ...cell, ...updates } : cell
-        ),
-      }))
-    },
-
-    deleteCell: (id: string) => {
-      setCellManager((prev) => ({
-        ...prev,
-        cells: prev.cells.filter((cell) => cell.id !== id),
-      }))
-    },
-
-    addCell: () => {
-      const newCell = createNewCell()
-      setCellManager((prev) => ({
-        ...prev,
-        cells: [...prev.cells, newCell],
-      }))
-    },
-
-    runCell: (id: string) => {
-      const cell = cellManager.cells.find((c) => c.id === id)
-      if (
-        !cell ||
-        !workerRef.current ||
-        !isWorkerReady ||
-        cellManager.isAnyRunning
-      ) {
-        return
-      }
-
-      // Clear output and set running status
-      setCellManager((prev) => ({
-        ...prev,
-        cells: prev.cells.map((c) =>
-          c.id === id ? { ...c, output: '', executionStatus: 'running' } : c
-        ),
-        isAnyRunning: true,
-        runningCellIds: new Set([id]),
-      }))
-
-      runningCellRef.current = id
-      setIsStopping(false)
-
-      const executeMessage: PyodideMessage = {
-        type: 'execute',
-        code: cell.text,
-      }
-      console.log('[Main] Sending message to worker:', {
-        ...executeMessage,
-        code: executeMessage.code
-          ? executeMessage.code.slice(0, 100) +
-            (executeMessage.code.length > 100 ? '...' : '')
-          : 'undefined',
-      })
-      workerRef.current.postMessage(executeMessage)
-    },
-
-    stopCell: (id: string) => {
-      if (!sharedArrayBufferSupported) {
-        setCellManager((prev) => ({
-          ...prev,
-          cells: prev.cells.map((cell) =>
-            cell.id === id
-              ? {
-                  ...cell,
-                  output:
-                    cell.output +
-                    '\nError: SharedArrayBuffer not supported. Cancellation unavailable.\n',
-                }
-              : cell
-          ),
-        }))
-        return
-      }
-
-      if (!interruptBufferRef.current) {
-        setCellManager((prev) => ({
-          ...prev,
-          cells: prev.cells.map((cell) =>
-            cell.id === id
-              ? {
-                  ...cell,
-                  output:
-                    cell.output +
-                    '\nError: Interrupt buffer not initialized. Cancellation unavailable.\n',
-                }
-              : cell
-          ),
-        }))
-        return
-      }
-
-      setIsStopping(true)
-
-      // Set interrupt signal: buffer[0] = 2 triggers SIGINT in Pyodide
-      const view = new Uint8Array(interruptBufferRef.current)
-      view[0] = 2
-      console.log(
-        '[Main] Set interrupt signal in SharedArrayBuffer: buffer[0] = 2'
+      setCells((prev) =>
+        prev.map((cell) => (cell.id === id ? { ...cell, ...updates } : cell))
       )
     },
 
+    runCell: (id: string) => {
+      if (!isWorkerReady || runningCellRef.current) return
+
+      const cell = cells.find((c) => c.id === id)
+      if (!cell) return
+
+      runningCellRef.current = id
+      setCells((prev) =>
+        prev.map((c) =>
+          c.id === id ? { ...c, executionStatus: 'running', output: '' } : c
+        )
+      )
+
+      workerRef.current?.postMessage({ type: 'execute', code: cell.text })
+    },
+
+    stopCell: (id: string) => {
+      if (runningCellRef.current === id && interruptBufferRef.current) {
+        setIsStopping(true)
+        const buffer = new Uint8Array(interruptBufferRef.current)
+        buffer[0] = 2 // SIGINT
+      }
+    },
+
+    deleteCell: (id: string) => {
+      setCells((prev) => prev.filter((cell) => cell.id !== id))
+    },
+
+    addCell: () => {
+      const newId = `cell-${Date.now()}`
+      const newCell = createNewCell(newId)
+      setCells((prev) => [...prev, newCell])
+    },
+
     runAllCells: () => {
-      if (cellManager.isAnyRunning || !isWorkerReady) {
+      const isAnyRunning = cells.some((c) => c.executionStatus === 'running')
+
+      if (!workerRef.current || !isWorkerReady || isAnyRunning) {
         return
       }
 
       // Run cells sequentially
-      let currentIndex = 0
-      const runNext = () => {
-        if (currentIndex >= cellManager.cells.length) {
-          return
-        }
+      const runNextCell = (index: number) => {
+        if (index >= cells.length) return
 
-        const cell = cellManager.cells[currentIndex]
+        const cell = cells[index]
         cellOperations.runCell(cell.id)
 
-        // Wait for current execution to complete before running next
+        // Wait for completion before running next cell
         const checkCompletion = () => {
-          const updatedManager = cellManager
-          const currentCell = updatedManager.cells.find((c) => c.id === cell.id)
+          const updatedCells = cells
+          const currentCell = updatedCells.find((c) => c.id === cell.id)
+
           if (currentCell && currentCell.executionStatus !== 'running') {
-            currentIndex++
-            setTimeout(runNext, 100) // Small delay before running next cell
+            setTimeout(() => runNextCell(index + 1), 100)
           } else {
             setTimeout(checkCompletion, 100)
           }
@@ -337,78 +318,74 @@ export default function Home() {
         setTimeout(checkCompletion, 100)
       }
 
-      runNext()
+      runNextCell(0)
     },
 
     toggleCellVisibility: (id: string) => {
-      setCellManager((prev) => ({
-        ...prev,
-        cells: prev.cells.map((cell) =>
+      setCells((prev) =>
+        prev.map((cell) =>
           cell.id === id
             ? { ...cell, isCodeVisible: !cell.isCodeVisible }
             : cell
-        ),
-      }))
+        )
+      )
     },
   }
 
+  // Handle form submission
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    handleSubmit(e)
+  }
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value)
+  }
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault()
+      if (input.trim()) {
+        onSubmit(e as React.FormEvent)
+      }
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
-          Jupyter Engine - Python in Browser
-        </h1>
-
-        {/* Single AI Chat Interface */}
-        <div className="w-full max-w-4xl mx-auto mb-8">
-          <Chat
-            cells={cellManager.cells}
-            onCellUpdate={cellOperations.updateCell}
-          />
-        </div>
-
-        {/* Cell Controls */}
-        <div className="w-full max-w-4xl mx-auto mb-6">
-          <div className="flex gap-4 justify-center">
-            <button
-              onClick={cellOperations.runAllCells}
-              disabled={cellManager.isAnyRunning || !isWorkerReady}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                cellManager.isAnyRunning || !isWorkerReady
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-500 text-white hover:bg-blue-600 cursor-pointer'
-              }`}
-              aria-label="Run all cells"
-            >
-              <FaPlay className="w-4 h-4" />
-              Run All
-            </button>
-
-            <button
-              onClick={cellOperations.addCell}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-green-500 text-white hover:bg-green-600 transition-colors"
-              aria-label="Add new cell"
-            >
-              <FaPlus className="w-4 h-4" />
-              Add Cell
-            </button>
-          </div>
-        </div>
-
-        {/* Cell List */}
-        <div className="w-full max-w-4xl mx-auto space-y-4">
-          {cellManager.cells.map((cell) => (
-            <Cell
-              key={cell.id}
-              cell={cell}
-              operations={cellOperations}
-              isWorkerReady={isWorkerReady}
-              isStopping={isStopping}
-              sharedArrayBufferSupported={sharedArrayBufferSupported}
-            />
-          ))}
+    <main className="flex flex-col h-screen">
+      {/* Header */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-300">
+        <div className="container mx-auto max-w-4xl px-4 py-4">
+          <h1 className="text-2xl font-bold text-gray-900">
+            🐍 Python Notebook with AI Assistant
+          </h1>
         </div>
       </div>
+
+      {/* Unified Conversation View */}
+      <ConversationList
+        items={conversationItems}
+        cellOperations={cellOperations}
+        isWorkerReady={isWorkerReady}
+        isStopping={isStopping}
+        sharedArrayBufferSupported={sharedArrayBufferSupported}
+        isLoading={isLoading}
+      />
+
+      {/* Fixed Chat Input */}
+      <FixedChatInput
+        input={input}
+        isLoading={isLoading}
+        onInputChange={handleInputChange}
+        onSubmit={onSubmit}
+        onKeyDown={handleKeyDown}
+        onAddCell={cellOperations.addCell}
+      />
+
+      {/* Bottom padding to account for fixed input */}
+      <div className="h-24" />
     </main>
   )
 }
