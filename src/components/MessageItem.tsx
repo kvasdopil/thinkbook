@@ -4,6 +4,7 @@ import React from 'react'
 import { Message } from 'ai/react'
 import ToolCallDisplay from './ToolCallDisplay'
 import ReactMarkdown from 'react-markdown'
+import { MarkdownComponents } from './MarkdownComponents'
 
 // Type for message parts from AI SDK
 type MessagePart = NonNullable<Message['parts']>[number]
@@ -43,8 +44,10 @@ export default function MessageItem({ message }: MessageItemProps) {
                   : 'bg-transparent text-gray-800'
               }`}
             >
-              <div className="text-sm markdown-content">
-                <ReactMarkdown>{part.text}</ReactMarkdown>
+              <div className="text-sm">
+                <ReactMarkdown components={MarkdownComponents}>
+                  {part.text}
+                </ReactMarkdown>
               </div>
             </div>
           </div>
