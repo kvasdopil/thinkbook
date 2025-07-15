@@ -7,6 +7,7 @@ import type { PyodideMessage, PyodideResponse } from '../types/worker'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let pyodide: any = null
+let pendingInterruptBuffer: SharedArrayBuffer | null = null
 
 async function initializePyodide() {
   try {
@@ -14,6 +15,13 @@ async function initializePyodide() {
     pyodide = await loadPyodide({
       indexURL: 'https://cdn.jsdelivr.net/npm/pyodide@0.28.0/',
     })
+
+    // Set up pending interrupt buffer if one was provided before initialization
+    if (pendingInterruptBuffer) {
+      console.log('[Worker] Setting up pending interrupt buffer')
+      setInterruptBufferInternal(pendingInterruptBuffer)
+      pendingInterruptBuffer = null
+    }
 
     const response: PyodideResponse = {
       type: 'init-complete',
@@ -30,7 +38,7 @@ async function initializePyodide() {
   }
 }
 
-function setInterruptBuffer(buffer: SharedArrayBuffer) {
+function setInterruptBufferInternal(buffer: SharedArrayBuffer) {
   try {
     // Pyodide expects a Uint8Array, not raw SharedArrayBuffer
     const interruptBuffer = new Uint8Array(buffer)
@@ -49,6 +57,19 @@ function setInterruptBuffer(buffer: SharedArrayBuffer) {
     console.log('[Worker] Sending error response:', response)
     self.postMessage(response)
   }
+}
+
+function setInterruptBuffer(buffer: SharedArrayBuffer) {
+  if (pyodide === null) {
+    // Pyodide not initialized yet, store buffer for later
+    console.log(
+      '[Worker] Pyodide not ready, storing interrupt buffer for later'
+    )
+    pendingInterruptBuffer = buffer
+    return
+  }
+
+  setInterruptBufferInternal(buffer)
 }
 
 async function executeCode(code: string) {

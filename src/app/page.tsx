@@ -69,55 +69,49 @@ export default function Home() {
   const conversationItems: ConversationItem[] = useMemo(() => {
     const items: ConversationItem[] = []
 
-    // Add initial cell if no messages yet
+    // If no messages, show all cells in order
     if (messages.length === 0) {
-      items.push({
-        type: 'cell',
-        data: cells[0],
-        timestamp: 0,
-      })
-      // Add remaining cells
-      for (let i = 1; i < cells.length; i++) {
+      cells.forEach((cell, index) => {
         items.push({
           type: 'cell',
-          data: cells[i],
-          timestamp: i,
+          data: cell,
+          timestamp: index,
         })
-      }
+      })
       return items
     }
 
-    let cellIndex = 0
+    // Add unlinked cells first (linkedMessageId = null)
+    const unlinkedCells = cells.filter((cell) => cell.linkedMessageId === null)
+    unlinkedCells.forEach((cell, index) => {
+      items.push({
+        type: 'cell',
+        data: cell,
+        timestamp: -100 + index, // Before all messages
+      })
+    })
 
-    // Interleave messages and cells chronologically
+    // Add messages and their linked cells in chronological order
     messages.forEach((message, messageIndex) => {
-      // Add the message (using live data from useChat)
+      // Add the message
       items.push({
         type: 'message',
         data: message,
-        timestamp: messageIndex * 2,
+        timestamp: messageIndex * 10,
       })
 
-      // Add a cell after this message if we have one
-      if (cellIndex < cells.length) {
+      // Add cells linked to this message immediately after it
+      const linkedCells = cells.filter(
+        (cell) => cell.linkedMessageId === message.id
+      )
+      linkedCells.forEach((cell, cellIndex) => {
         items.push({
           type: 'cell',
-          data: cells[cellIndex],
-          timestamp: messageIndex * 2 + 1,
+          data: cell,
+          timestamp: messageIndex * 10 + cellIndex + 1,
         })
-        cellIndex++
-      }
-    })
-
-    // Add any remaining cells
-    while (cellIndex < cells.length) {
-      items.push({
-        type: 'cell',
-        data: cells[cellIndex],
-        timestamp: messages.length * 2 + cellIndex,
       })
-      cellIndex++
-    }
+    })
 
     return items
   }, [messages, cells])
@@ -285,7 +279,10 @@ export default function Home() {
 
     addCell: () => {
       const newId = `cell-${Date.now()}`
-      const newCell = createNewCell(newId)
+      // Link new cell to the last message (if any)
+      const lastMessageId =
+        messages.length > 0 ? messages[messages.length - 1].id : null
+      const newCell = createNewCell(newId, lastMessageId)
       setCells((prev) => [...prev, newCell])
     },
 
@@ -354,7 +351,7 @@ export default function Home() {
   }
 
   return (
-    <main className="flex flex-col h-screen">
+    <main className="flex flex-col h-screen bg-white">
       {/* Header */}
       <div className="flex-shrink-0 bg-white border-b border-gray-300">
         <div className="container mx-auto max-w-4xl px-4 py-4">
