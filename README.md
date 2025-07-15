@@ -131,3 +131,18 @@
   - **React-Markdown Integration**: Used robust react-markdown library (v10.1.0) with TypeScript support and custom component overrides
   - **Test Coverage**: Added comprehensive tests verifying markdown component configuration, dependency installation, and basic rendering functionality
   - **Clean Architecture**: Markdown rendering only applied to AI assistant messages while preserving existing tool call and user message rendering patterns
+
+- **0012.SNOWFLAKE_SQL_ENDPOINT.md**: Implemented a secure backend REST endpoint for executing SQL queries and fetching Snowflake result partitions. Added full integration with Snowflake's REST API while keeping database credentials secure on the server side. The implementation includes:
+  - **Secure API Endpoint**: POST route at `/api/snowflake` that validates access tokens and environment configuration before processing requests
+  - **Dual Functionality**: Supports both SQL query execution (`{ "sql": "SELECT ..." }`) and result partition fetching (`{ "handle": "<id>", "partition": <number?> }`)
+  - **Authorization Handling**: Requires `x-snowflake-access-token` header, returns HTTP 400 if missing with descriptive error message
+  - **Parameter Validation**: Validates that either `sql` or `handle` is provided, returns HTTP 400 if both are missing
+  - **Snowflake Integration**: Forwards requests to Snowflake's REST API with proper headers (`Authorization: Bearer <token>`) and 30-second timeout
+  - **Error Propagation**: Captures and forwards Snowflake API errors with HTTP 500 status and original error messages
+  - **Environment Configuration**: Reads base URL from `SNOWFLAKE_BASE_URL` environment variable with descriptive error if undefined
+  - **TypeScript Types**: Comprehensive type definitions for Snowflake responses (`SnowflakeResult`), request bodies (`SnowflakeRequestBody`), and error responses
+  - **Partition Support**: Handles partition parameter conversion to number with fallback to 0, constructs proper GET URLs for partition fetching
+  - **Security**: Logs server-side errors without exposing stack traces to clients, uses secure header-based token authentication
+  - **Comprehensive Testing**: Full test coverage including successful execution, partition fetching, token validation, parameter validation, error propagation, and edge cases
+  - **Node Environment Tests**: Tests run in Node.js environment with proper fetch mocking and environment variable handling
+  - **All Quality Gates**: All existing lint, type-check, and Jest test suites pass with the new implementation
