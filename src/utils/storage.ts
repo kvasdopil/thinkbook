@@ -1,31 +1,39 @@
-import localforage from 'localforage'
-import { SnowflakeConfig } from '@/types/snowflake'
+import localforage from 'localforage';
+import { NotebookFile } from '@/components/FilePanel';
 
-const GEMINI_API_KEY = 'gemini-api-key'
-const SNOWFLAKE_ACCESS_TOKEN = 'snowflake-access-token'
-const SNOWFLAKE_HOSTNAME = 'snowflake-hostname'
+const NOTEBOOK_FILES_KEY = 'notebookFiles';
+const LAST_ACTIVE_FILE_ID_KEY = 'lastActiveFileId';
 
-export async function getGeminiApiKey(): Promise<string | null> {
-  return localforage.getItem<string>(GEMINI_API_KEY)
+export const saveNotebookFiles = async (files: Record<string, NotebookFile>) => {
+  await localforage.setItem(NOTEBOOK_FILES_KEY, files);
+};
+
+export const loadNotebookFiles = async (): Promise<Record<string, NotebookFile> | null> => {
+  return await localforage.getItem(NOTEBOOK_FILES_KEY);
+};
+
+export const saveLastActiveFileId = async (id: string) => {
+  await localforage.setItem(LAST_ACTIVE_FILE_ID_KEY, id);
+};
+
+export const loadLastActiveFileId = async (): Promise<string | null> => {
+  return await localforage.getItem(LAST_ACTIVE_FILE_ID_KEY);
+};
+
+const GEMINI_API_KEY = 'geminiApiKey';
+export const getGeminiApiKey = async (): Promise<string | null> => {
+    return await localforage.getItem(GEMINI_API_KEY);
 }
 
-export async function setGeminiApiKey(apiKey: string): Promise<void> {
-  await localforage.setItem(GEMINI_API_KEY, apiKey)
+export const setGeminiApiKey = async (key: string) => {
+    await localforage.setItem(GEMINI_API_KEY, key);
 }
 
-export async function getSnowflakeConfig(): Promise<SnowflakeConfig> {
-  const accessToken = await localforage.getItem<string>(SNOWFLAKE_ACCESS_TOKEN)
-  const hostname = await localforage.getItem<string>(SNOWFLAKE_HOSTNAME)
-  return { accessToken, hostname }
+const SNOWFLAKE_CONFIG_KEY = 'snowflakeConfig';
+export const getSnowflakeConfig = async (): Promise<{ accessToken: string, hostname: string } | null> => {
+    return await localforage.getItem(SNOWFLAKE_CONFIG_KEY);
 }
 
-export async function setSnowflakeConfig(
-  config: SnowflakeConfig
-): Promise<void> {
-  if (config.accessToken) {
-    await localforage.setItem(SNOWFLAKE_ACCESS_TOKEN, config.accessToken)
-  }
-  if (config.hostname) {
-    await localforage.setItem(SNOWFLAKE_HOSTNAME, config.hostname)
-  }
+export const setSnowflakeConfig = async (config: { accessToken: string, hostname: string }) => {
+    await localforage.setItem(SNOWFLAKE_CONFIG_KEY, config);
 }

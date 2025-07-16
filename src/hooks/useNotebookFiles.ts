@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import localforage from 'localforage';
 import { v4 as uuidv4 } from 'uuid';
 import { NotebookFile } from '../components/FilePanel';
 import { ConversationItem } from '@/types/conversation';
-
-const NOTEBOOK_FILES_KEY = 'notebookFiles';
-const LAST_ACTIVE_FILE_ID_KEY = 'lastActiveFileId';
+import {
+  saveNotebookFiles,
+  loadNotebookFiles,
+  saveLastActiveFileId,
+  loadLastActiveFileId,
+} from '../utils/storage';
 
 export const useNotebookFiles = () => {
   const [files, setFiles] = useState<NotebookFile[]>([]);
@@ -15,8 +17,8 @@ export const useNotebookFiles = () => {
   useEffect(() => {
     const loadFiles = async () => {
       setIsLoading(true);
-      const storedFiles: Record<string, NotebookFile> | null = await localforage.getItem(NOTEBOOK_FILES_KEY);
-      const lastActiveId: string | null = await localforage.getItem(LAST_ACTIVE_FILE_ID_KEY);
+      const storedFiles = await loadNotebookFiles();
+      const lastActiveId = await loadLastActiveFileId();
 
       if (storedFiles) {
         const filesArray = Object.values(storedFiles);
@@ -37,7 +39,7 @@ export const useNotebookFiles = () => {
       acc[file.id] = file;
       return acc;
     }, {} as Record<string, NotebookFile>);
-    await localforage.setItem(NOTEBOOK_FILES_KEY, filesMap);
+    await saveNotebookFiles(filesMap);
     setFiles(updatedFiles);
   }, []);
 
@@ -53,7 +55,7 @@ export const useNotebookFiles = () => {
     const updatedFiles = [...files, newFile];
     saveFiles(updatedFiles);
     setActiveFileId(newFile.id);
-    localforage.setItem(LAST_ACTIVE_FILE_ID_KEY, newFile.id);
+    saveLastActiveFileId(newFile.id);
     return newFile;
   }, [files, saveFiles]);
 
@@ -85,7 +87,7 @@ export const useNotebookFiles = () => {
 
   const selectFile = useCallback((id: string) => {
     setActiveFileId(id);
-    localforage.setItem(LAST_ACTIVE_FILE_ID_KEY, id);
+    saveLastActiveFileId(id);
   }, []);
 
   const getActiveFile = useCallback(() => {
