@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { FiSettings } from 'react-icons/fi'
 import { useGeminiApiKey } from '@/hooks/useGeminiApiKey'
+import { useSnowflakeConfig } from '@/hooks/useSnowflakeConfig'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -9,16 +9,32 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { apiKey, saveApiKey } = useGeminiApiKey()
-  const [inputValue, setInputValue] = useState(apiKey || '')
+  const { snowflakeConfig, saveSnowflakeConfig } = useSnowflakeConfig()
+  const [geminiApiKey, setGeminiApiKey] = useState(apiKey || '')
+  const [snowflakeToken, setSnowflakeToken] = useState(
+    snowflakeConfig.accessToken || ''
+  )
+  const [snowflakeHostname, setSnowflakeHostname] = useState(
+    snowflakeConfig.hostname || ''
+  )
 
   useEffect(() => {
     if (apiKey) {
-      setInputValue(apiKey)
+      setGeminiApiKey(apiKey)
     }
   }, [apiKey])
 
+  useEffect(() => {
+    setSnowflakeToken(snowflakeConfig.accessToken || '')
+    setSnowflakeHostname(snowflakeConfig.hostname || '')
+  }, [snowflakeConfig])
+
   const handleSave = async () => {
-    await saveApiKey(inputValue)
+    await saveApiKey(geminiApiKey)
+    await saveSnowflakeConfig({
+      accessToken: snowflakeToken,
+      hostname: snowflakeHostname,
+    })
     onClose()
   }
 
@@ -31,20 +47,56 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">Settings</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
             &times;
           </button>
         </div>
         <div className="space-y-4">
           <div>
-            <label htmlFor="gemini-api-key" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="gemini-api-key"
+              className="block text-sm font-medium text-gray-700"
+            >
               Gemini AI Key
             </label>
             <input
               type="password"
               id="gemini-api-key"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              value={geminiApiKey}
+              onChange={(e) => setGeminiApiKey(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="snowflake-access-token"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Snowflake Access Token
+            </label>
+            <input
+              type="password"
+              id="snowflake-access-token"
+              value={snowflakeToken}
+              onChange={(e) => setSnowflakeToken(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="snowflake-hostname"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Snowflake Hostname
+            </label>
+            <input
+              type="text"
+              id="snowflake-hostname"
+              value={snowflakeHostname}
+              onChange={(e) => setSnowflakeHostname(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             />
           </div>

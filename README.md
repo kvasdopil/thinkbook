@@ -153,3 +153,12 @@
   - **Custom Hook**: A new `useGeminiApiKey` hook to manage the API key.
   - **API Integration**: The chat API now uses the key from the `x-gemini-api-key` header.
   - **Automatic Prompt**: The settings modal is automatically displayed if the API key is not set.
+
+- **0014.SETTINGS_MODAL_SNOWFLAKE.md**: Extended the settings modal to include Snowflake configuration, allowing users to connect to their own Snowflake accounts. The implementation includes:
+  - **Extended Settings Modal**: Added "Snowflake Access Token" and "Snowflake Hostname" fields to the settings modal.
+  - **Custom Hook**: Created a `useSnowflakeConfig` hook to manage the Snowflake configuration.
+  - **Local Storage**: The Snowflake access token and hostname are saved to local storage.
+  - **Dynamic API Backend**: The `/api/snowflake` backend now dynamically constructs the Snowflake API URL from the provided hostname and uses the access token from the request headers.
+  - **Automatic Prompt**: The settings modal now also opens automatically if the Snowflake configuration is incomplete.
+  - **Updated AI Function**: The AI can now use an `executeSql` function to directly query Snowflake, with any errors being returned to the user in the chat.
+  - **Comprehensive Testing**: Updated and added tests for the new settings modal functionality and the backend Snowflake API.

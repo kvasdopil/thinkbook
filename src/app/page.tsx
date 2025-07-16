@@ -11,9 +11,14 @@ import ConversationList from '@/components/ConversationList'
 import FixedChatInput from '@/components/FixedChatInput'
 import SettingsModal from '@/components/SettingsModal'
 import { useGeminiApiKey } from '@/hooks/useGeminiApiKey'
+import { useSnowflakeConfig } from '@/hooks/useSnowflakeConfig'
 import { executeUpdateCell } from '@/ai-functions/update-cell'
 import { executeCreateCodeCell } from '@/ai-functions/create-code-cell'
-import type { UpdateCellParams, CreateCodeCellParams } from '@/ai-functions'
+import { executeSql } from '@/ai-functions/execute-sql'
+import type {
+  UpdateCellParams,
+  CreateCodeCellParams,
+} from '@/ai-functions'
 
 export default function Home() {
   // Cells state - only store cells, not messages
@@ -26,13 +31,25 @@ export default function Home() {
   const [sharedArrayBufferSupported, setSharedArrayBufferSupported] =
     useState(false)
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
-  const { apiKey, isLoaded } = useGeminiApiKey()
+  const { apiKey, isLoaded: isGeminiKeyLoaded } = useGeminiApiKey()
+  const { snowflakeConfig, isLoaded: isSnowflakeConfigLoaded } =
+    useSnowflakeConfig()
 
   useEffect(() => {
-    if (isLoaded && !apiKey) {
+    if (
+      (isGeminiKeyLoaded && !apiKey) ||
+      (isSnowflakeConfigLoaded &&
+        (!snowflakeConfig.accessToken || !snowflakeConfig.hostname))
+    ) {
       setIsSettingsModalOpen(true)
     }
-  }, [isLoaded, apiKey])
+  }, [
+    isGeminiKeyLoaded,
+    apiKey,
+    isSnowflakeConfigLoaded,
+    snowflakeConfig.accessToken,
+    snowflakeConfig.hostname,
+  ])
 
   const workerRef = useRef<Worker | null>(null)
   const interruptBufferRef = useRef<SharedArrayBuffer | null>(null)
@@ -82,6 +99,8 @@ export default function Home() {
               },
               currentMessageId: toolCall.toolCallId,
             })
+          } else if (toolCall.toolName === 'executeSql') {
+            result = await executeSql(toolCall.args as { sql: string })
           } else {
             throw new Error(`Unknown function: ${toolCall.toolName}`)
           }
