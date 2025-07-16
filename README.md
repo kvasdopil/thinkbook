@@ -162,3 +162,10 @@
   - **Automatic Prompt**: The settings modal now also opens automatically if the Snowflake configuration is incomplete.
   - **Updated AI Function**: The AI can now use an `executeSql` function to directly query Snowflake, with any errors being returned to the user in the chat.
   - **Comprehensive Testing**: Updated and added tests for the new settings modal functionality and the backend Snowflake API.
+
+- **0015.DESCRIBE_SNOWFLAKE_TABLE_TOOL.md**: Implemented a new AI tool to describe Snowflake tables. The implementation includes:
+  - **New AI Tool**: A new AI tool `describeSnowflakeTable(table)` is available to the assistant.
+  - **Zod Validation**: The `table` argument is validated to match the `database.schema.table` pattern.
+  - **Snowflake Integration**: The tool issues a POST request to `/api/snowflake` with the body `{ "sql": "describe table <table>" }`.
+  - **Reusability**: The implementation reuses the existing Snowflake client utility.
+  - **Comprehensive Testing**: Unit tests cover successful calls, validation failures, and backend error propagation.
