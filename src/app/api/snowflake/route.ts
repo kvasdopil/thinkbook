@@ -8,20 +8,14 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
-    // Check for required environment variable
-    const baseUrl = process.env.SNOWFLAKE_BASE_URL
-    if (!baseUrl) {
-      throw new Error(
-        'SNOWFLAKE_BASE_URL environment variable is not configured'
-      )
-    }
-
-    // Get access token from headers
     const accessToken = req.headers.get('x-snowflake-access-token')
-    if (!accessToken) {
+    const hostname = req.headers.get('x-snowflake-hostname')
+
+    if (!accessToken || !hostname) {
       return new Response(
         JSON.stringify({
-          error: 'A valid Snowflake access token is required',
+          error:
+            'Snowflake access token and hostname are required headers.',
         } as SnowflakeErrorResponse),
         {
           status: 400,
@@ -30,15 +24,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Parse request body
     const body: SnowflakeRequestBody = await req.json()
     const { sql, handle, partition } = body
 
-    // Validate that either sql or handle is provided
     if (!sql && !handle) {
       return new Response(
         JSON.stringify({
-          error: 'Request must contain either "sql" or "handle"',
+          error: 'Request must contain either "sql" or "handle".',
         } as SnowflakeErrorResponse),
         {
           status: 400,
@@ -47,24 +39,22 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const baseUrl = `https://${hostname}`
     let snowflakeUrl: string
     let requestBody: SnowflakeStatementRequest | undefined
 
     if (sql) {
-      // Execute SQL query
       snowflakeUrl = `${baseUrl}/api/v2/statements`
       requestBody = {
         statement: sql,
         timeout: 30,
       }
     } else {
-      // Fetch partition of existing statement
       const partitionNumber = Number(partition) || 0
       snowflakeUrl = `${baseUrl}/api/v2/statements/${handle}?partition=${partitionNumber}`
       requestBody = undefined
     }
 
-    // Make request to Snowflake API
     const snowflakeResponse = await fetch(snowflakeUrl, {
       method: sql ? 'POST' : 'GET',
       headers: {
@@ -78,22 +68,18 @@ export async function POST(req: NextRequest) {
     const responseData: SnowflakeResult = await snowflakeResponse.json()
 
     if (!snowflakeResponse.ok) {
-      console.error(
-        'Snowflake API error:',
-        responseData.message || 'Unknown error'
-      )
+      console.error('Snowflake API error:', responseData.message || 'Unknown error')
       return new Response(
         JSON.stringify({
           error: responseData.message || 'Snowflake API request failed',
         } as SnowflakeErrorResponse),
         {
-          status: 500,
+          status: snowflakeResponse.status,
           headers: { 'Content-Type': 'application/json' },
         }
       )
     }
 
-    // Return successful response
     return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

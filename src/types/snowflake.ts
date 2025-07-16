@@ -34,3 +34,8 @@ export interface SnowflakeStatementRequest {
   statement: string
   timeout: number
 }
+
+export interface SnowflakeConfig {
+  accessToken: string | null
+  hostname: string | null
+}
