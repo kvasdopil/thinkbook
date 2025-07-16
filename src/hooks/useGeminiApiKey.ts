@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getGeminiApiKey, setGeminiApiKey } from '@/utils/storage'
+import { getGeminiApiKey, setGeminiApiKey } from '../utils/storage';
 
 export function useGeminiApiKey() {
   const [apiKey, setApiKey] = useState<string | null>(null)
@@ -7,7 +7,7 @@ export function useGeminiApiKey() {
 
   useEffect(() => {
     async function loadApiKey() {
-      const storedKey = await getGeminiApiKey()
+      const storedKey = await getGeminiApiKey();
       setApiKey(storedKey)
       setIsLoaded(true)
     }

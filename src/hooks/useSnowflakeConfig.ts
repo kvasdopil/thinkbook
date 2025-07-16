@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getSnowflakeConfig, setSnowflakeConfig } from '@/utils/storage'
+import { getSnowflakeConfig, setSnowflakeConfig } from '../utils/storage'
 import { SnowflakeConfig } from '@/types/snowflake'
 
 export function useSnowflakeConfig() {
@@ -12,7 +12,7 @@ export function useSnowflakeConfig() {
   useEffect(() => {
     const fetchConfig = async () => {
       const storedConfig = await getSnowflakeConfig()
-      setConfig(storedConfig)
+      setConfig(storedConfig || { accessToken: null, hostname: null })
       setIsLoaded(true)
     }
     fetchConfig()

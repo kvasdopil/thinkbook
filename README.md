@@ -172,3 +172,10 @@
   - **Error Handling**: Comprehensive error handling with Zod validation errors and backend error propagation
   - **Comprehensive Testing**: Unit tests cover successful calls, validation failures, backend error propagation, edge cases, and frontend tool call rendering
   - **Quality Assurance**: All lint, type-check, and existing test suites pass with proper TypeScript type safety (61 tests total)
+
+- **0016.NOTEBOOK_FILE_PANEL.md**: Implemented a notebook file panel for managing multiple notebooks. The implementation includes:
+  - **File Panel**: A new `FilePanel` component that lists notebook files, grouped by date.
+  - **File Management**: A `useNotebookFiles` hook to manage creating, loading, and saving notebook files to `localforage`.
+  - **State Management**: The `Home` component now gets its state from the `useNotebookFiles` hook, and all modifications are persisted.
+  - **Persistence**: The application state is saved to `localforage`, and the last active file is reopened on page load.
+  - **Testing**: Added tests for the `FilePanel` component and the `useNotebookFiles` hook.
