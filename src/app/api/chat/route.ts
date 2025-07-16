@@ -3,23 +3,24 @@ import { streamText } from 'ai'
 import { SYSTEM_PROMPT } from '@/prompts/system-prompt'
 import { AI_FUNCTIONS } from '@/ai-functions'
 
-const google = createGoogleGenerativeAI({
-  apiKey: process.env.GEMINI_API_KEY,
-})
-
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json()
+    const geminiApiKey = req.headers.get('x-gemini-api-key')
 
-    if (!process.env.GEMINI_API_KEY) {
+    if (!geminiApiKey) {
       return new Response(
-        JSON.stringify({ error: 'GEMINI_API_KEY is not configured' }),
+        JSON.stringify({ error: 'Missing x-gemini-api-key header' }),
         {
-          status: 500,
+          status: 400,
           headers: { 'Content-Type': 'application/json' },
         }
       )
     }
+
+    const google = createGoogleGenerativeAI({
+      apiKey: geminiApiKey,
+    })
 
     const result = await streamText({
       model: google('gemini-2.0-flash-exp'),

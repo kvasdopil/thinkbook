@@ -2,12 +2,15 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useChat } from 'ai/react'
+import { FiSettings } from 'react-icons/fi'
 import type { CellData, CellOperations } from '@/types/cell'
 import { createNewCell } from '@/types/cell'
 import { ConversationItem } from '@/types/conversation'
 import type { PyodideResponse } from '@/types/worker'
 import ConversationList from '@/components/ConversationList'
 import FixedChatInput from '@/components/FixedChatInput'
+import SettingsModal from '@/components/SettingsModal'
+import { useGeminiApiKey } from '@/hooks/useGeminiApiKey'
 import { executeUpdateCell } from '@/ai-functions/update-cell'
 import { executeCreateCodeCell } from '@/ai-functions/create-code-cell'
 import type { UpdateCellParams, CreateCodeCellParams } from '@/ai-functions'
@@ -22,6 +25,14 @@ export default function Home() {
   const [isStopping, setIsStopping] = useState(false)
   const [sharedArrayBufferSupported, setSharedArrayBufferSupported] =
     useState(false)
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+  const { apiKey, isLoaded } = useGeminiApiKey()
+
+  useEffect(() => {
+    if (isLoaded && !apiKey) {
+      setIsSettingsModalOpen(true)
+    }
+  }, [isLoaded, apiKey])
 
   const workerRef = useRef<Worker | null>(null)
   const interruptBufferRef = useRef<SharedArrayBuffer | null>(null)
@@ -32,6 +43,9 @@ export default function Home() {
     useChat({
       api: '/api/chat',
       maxSteps: 5,
+      headers: {
+        'x-gemini-api-key': apiKey || '',
+      },
       async onToolCall({ toolCall }) {
         try {
           let result: unknown
@@ -384,11 +398,19 @@ export default function Home() {
   return (
     <main className="flex flex-col h-screen bg-white">
       {/* Header */}
+      {/* Header */}
       <div className="flex-shrink-0 bg-white border-b border-gray-300">
-        <div className="container mx-auto max-w-4xl px-4 py-4">
+        <div className="container mx-auto max-w-4xl px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">
             🐍 Python Notebook with AI Assistant
           </h1>
+          <button
+            onClick={() => setIsSettingsModalOpen(true)}
+            className="p-2 rounded-md hover:bg-gray-100"
+            aria-label="Settings"
+          >
+            <FiSettings className="w-6 h-6 text-gray-600" />
+          </button>
         </div>
       </div>
 
@@ -415,6 +437,11 @@ export default function Home() {
 
       {/* Bottom padding to account for fixed input */}
       <div className="h-24" />
+
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
     </main>
   )
 }
