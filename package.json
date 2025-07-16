@@ -13,7 +13,9 @@
   "dependencies": {
     "@ai-sdk/google": "^1.2.22",
     "@monaco-editor/react": "^4.6.0",
+    "@types/uuid": "^10.0.0",
     "ai": "^4.3.18",
+    "date-fns": "^4.1.0",
     "localforage": "^1.10.0",
     "monaco-editor": "^0.52.0",
     "next": "^15.3.5",
@@ -21,6 +23,7 @@
     "react-dom": "^19.0.0",
     "react-icons": "^5.5.0",
     "react-markdown": "^10.1.0",
+    "uuid": "^11.1.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
