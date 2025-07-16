@@ -142,6 +142,62 @@ describe('AI Functions', () => {
     expect(screen.getByText('createCodeCell()')).toBeInTheDocument()
   })
 
+  it('displays describeSnowflakeTable function call messages', () => {
+    const mockMessages = [
+      {
+        id: '1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'text',
+            text: "I'll describe the table structure for you.",
+          },
+          {
+            type: 'tool-invocation',
+            toolInvocation: {
+              toolCallId: 'call-3',
+              toolName: 'describeSnowflakeTable',
+              args: {
+                table: 'mydb.schema.users',
+              },
+              state: 'result',
+              result: {
+                data: [
+                  ['column', 'type'],
+                  ['id', 'NUMBER'],
+                  ['name', 'VARCHAR'],
+                ],
+              },
+            },
+          },
+        ],
+        toolInvocations: [
+          {
+            toolCallId: 'call-3',
+            toolName: 'describeSnowflakeTable',
+            args: {
+              table: 'mydb.schema.users',
+            },
+          },
+        ],
+      },
+    ]
+
+    mockUseChat.mockReturnValue({
+      messages: mockMessages,
+      input: '',
+      setInput: jest.fn(),
+      handleSubmit: jest.fn(),
+      isLoading: false,
+    } as unknown as ReturnType<typeof useChat>)
+
+    render(<Chat cells={mockCells} onCellUpdate={mockOnCellUpdate} />)
+    expect(
+      screen.getByText("I'll describe the table structure for you.")
+    ).toBeInTheDocument()
+    expect(screen.getByText('describeSnowflakeTable()')).toBeInTheDocument()
+  })
+
   it('passes correct props to Chat component', () => {
     render(<Chat cells={mockCells} onCellUpdate={mockOnCellUpdate} />)
     // If we get here without errors, the props are correctly typed

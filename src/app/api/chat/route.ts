@@ -39,6 +39,14 @@ export async function POST(req: Request) {
           description: AI_FUNCTIONS.createCodeCell.description,
           parameters: AI_FUNCTIONS.createCodeCell.parameters,
         },
+        executeSql: {
+          description: AI_FUNCTIONS.executeSql.description,
+          parameters: AI_FUNCTIONS.executeSql.parameters,
+        },
+        describeSnowflakeTable: {
+          description: AI_FUNCTIONS.describeSnowflakeTable.description,
+          parameters: AI_FUNCTIONS.describeSnowflakeTable.parameters,
+        },
       },
     })
 

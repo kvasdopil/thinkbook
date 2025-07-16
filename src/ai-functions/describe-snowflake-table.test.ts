@@ -47,9 +47,11 @@ describe('describeSnowflakeTable', () => {
   })
 
   it('should handle zod errors gracefully', async () => {
-    const params = { table: 'invalid.table.name.' }; // Invalid input to trigger ZodError
-    const result = await describeSnowflakeTable(params);
-    expect(result).toHaveProperty('error');
-    expect(result.error).toContain("Table name must be in the format 'database.schema.table'");
-  });
+    const params = { table: 'invalid.table.name.' } // Invalid input to trigger ZodError
+    const result = await describeSnowflakeTable(params)
+    expect(result).toHaveProperty('error')
+    expect((result as { error: string }).error).toContain(
+      "Table name must be in the format 'database.schema.table'"
+    )
+  })
 })

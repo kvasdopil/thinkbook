@@ -435,7 +435,12 @@ describe('CodeEditor', () => {
       // New function reference on every render
       const handleOutputChange = useCallback(
         (output: string) => {
-          console.log('Output received:', output)
+          console.log(
+            'Output received:',
+            output,
+            'Render count:',
+            rerenderCount
+          )
         },
         [rerenderCount]
       )

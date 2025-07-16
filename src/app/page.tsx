@@ -15,10 +15,8 @@ import { useSnowflakeConfig } from '@/hooks/useSnowflakeConfig'
 import { executeUpdateCell } from '@/ai-functions/update-cell'
 import { executeCreateCodeCell } from '@/ai-functions/create-code-cell'
 import { executeSql } from '@/ai-functions/execute-sql'
-import type {
-  UpdateCellParams,
-  CreateCodeCellParams,
-} from '@/ai-functions'
+import { describeSnowflakeTable } from '@/ai-functions/describe-snowflake-table'
+import type { UpdateCellParams, CreateCodeCellParams } from '@/ai-functions'
 
 export default function Home() {
   // Cells state - only store cells, not messages
@@ -101,6 +99,10 @@ export default function Home() {
             })
           } else if (toolCall.toolName === 'executeSql') {
             result = await executeSql(toolCall.args as { sql: string })
+          } else if (toolCall.toolName === 'describeSnowflakeTable') {
+            result = await describeSnowflakeTable(
+              toolCall.args as { table: string }
+            )
           } else {
             throw new Error(`Unknown function: ${toolCall.toolName}`)
           }

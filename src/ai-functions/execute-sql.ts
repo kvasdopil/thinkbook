@@ -1,26 +1,17 @@
 import { callSnowflakeAPI } from '@/utils/snowflakeClient'
-import {
-  SnowflakeResult,
-  SnowflakeErrorResponse,
-} from '@/types/snowflake'
+import { SnowflakeResult, SnowflakeErrorResponse } from '@/types/snowflake'
+
+import { z } from 'zod'
+
+const executeSqlParams = z.object({
+  sql: z.string().describe('The SQL query to execute.'),
+})
 
 export const executeSqlMetadata = {
-  type: 'function' as const,
-  function: {
-    name: 'executeSql',
-    description:
-      'Executes a SQL query against Snowflake and returns the results.',
-    parameters: {
-      type: 'object' as const,
-      properties: {
-        sql: {
-          type: 'string',
-          description: 'The SQL query to execute.',
-        },
-      },
-      required: ['sql'],
-    },
-  },
+  name: 'executeSql',
+  description:
+    'Executes a SQL query against Snowflake and returns the results.',
+  parameters: executeSqlParams,
 }
 
 export async function executeSql(params: {

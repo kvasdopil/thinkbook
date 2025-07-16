@@ -15,7 +15,13 @@ jest.mock('@/utils/storage', () => ({
 jest.mock('@/hooks/useGeminiApiKey')
 jest.mock('@/hooks/useSnowflakeConfig')
 
-jest.mock('react-markdown', () => (props: any) => <>{props.children}</>)
+jest.mock('react-markdown', () => {
+  const MockMarkdown = (props: { children: React.ReactNode }) => (
+    <>{props.children}</>
+  )
+  MockMarkdown.displayName = 'MockMarkdown'
+  return MockMarkdown
+})
 
 describe('Settings', () => {
   const mockUseGeminiApiKey = useGeminiApiKey as jest.Mock

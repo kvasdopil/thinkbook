@@ -163,9 +163,12 @@
   - **Updated AI Function**: The AI can now use an `executeSql` function to directly query Snowflake, with any errors being returned to the user in the chat.
   - **Comprehensive Testing**: Updated and added tests for the new settings modal functionality and the backend Snowflake API.
 
-- **0015.DESCRIBE_SNOWFLAKE_TABLE_TOOL.md**: Implemented a new AI tool to describe Snowflake tables. The implementation includes:
-  - **New AI Tool**: A new AI tool `describeSnowflakeTable(table)` is available to the assistant.
-  - **Zod Validation**: The `table` argument is validated to match the `database.schema.table` pattern.
-  - **Snowflake Integration**: The tool issues a POST request to `/api/snowflake` with the body `{ "sql": "describe table <table>" }`.
-  - **Reusability**: The implementation reuses the existing Snowflake client utility.
-  - **Comprehensive Testing**: Unit tests cover successful calls, validation failures, and backend error propagation.
+- **0015.DESCRIBE_SNOWFLAKE_TABLE_TOOL.md**: Implemented a new AI tool to describe Snowflake tables for streamlined analytics workflows. The implementation includes:
+  - **New AI Tool**: A new AI tool `describeSnowflakeTable(table)` is available to the assistant and properly included in the AI SDK call in `/api/chat`
+  - **Frontend Integration**: The tool call is properly handled in the `onToolCall` callback in the frontend Home component, enabling full end-to-end functionality
+  - **Zod Validation**: The `table` argument is validated to match the `database.schema.table` pattern using regex validation with clear error messages
+  - **Snowflake Integration**: The tool issues a POST request to `/api/snowflake` with the body `{ "sql": "describe table <table>" }` using the existing Snowflake client utility
+  - **Consistent Architecture**: Fixed metadata structure inconsistencies between AI functions to follow the same pattern (`{ name, description, parameters }`)
+  - **Error Handling**: Comprehensive error handling with Zod validation errors and backend error propagation
+  - **Comprehensive Testing**: Unit tests cover successful calls, validation failures, backend error propagation, edge cases, and frontend tool call rendering
+  - **Quality Assurance**: All lint, type-check, and existing test suites pass with proper TypeScript type safety (61 tests total)
