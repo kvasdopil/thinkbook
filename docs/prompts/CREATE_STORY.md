@@ -97,3 +97,5 @@ Keep this document up-to-date if formatting rules evolve.
 We do not need to estimate tasks or track completion in a user-story, just formulate the requirements and include details that essential for the task.
 
 Make sure to write unit tests and integration tests for the code.
+
+If you're uncertain about anything, ask clarifying questions or list them in a separate section
