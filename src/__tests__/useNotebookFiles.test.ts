@@ -325,4 +325,76 @@ describe('useNotebookFiles', () => {
       'file-2'
     )
   })
+
+  it('should delete a notebook and select the next most recent', async () => {
+    const mockFiles = {
+      '1': {
+        id: '1',
+        title: 'File 1',
+        updatedAt: '2023-01-01T00:00:00.000Z',
+        cells: [],
+        messages: [],
+        createdAt: '',
+      },
+      '2': {
+        id: '2',
+        title: 'File 2',
+        updatedAt: '2023-01-02T00:00:00.000Z',
+        cells: [],
+        messages: [],
+        createdAt: '',
+      },
+      '3': {
+        id: '3',
+        title: 'File 3',
+        updatedAt: '2023-01-03T00:00:00.000Z',
+        cells: [],
+        messages: [],
+        createdAt: '',
+      },
+    }
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce(mockFiles)
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce('3')
+
+    const { result } = renderHook(() => useNotebookFiles())
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(result.current.activeFileId).toBe('3')
+
+    await act(async () => {
+      result.current.deleteNotebook('3')
+    })
+
+    expect(result.current.files.length).toBe(2)
+    expect(result.current.activeFileId).toBe('2') // Next most recent
+  })
+
+  it('should handle deleting the only notebook', async () => {
+    const mockFiles = {
+      '1': {
+        id: '1',
+        title: 'File 1',
+        updatedAt: '2023-01-01T00:00:00.000Z',
+        cells: [],
+        messages: [],
+        createdAt: '',
+      },
+    }
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce(mockFiles)
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce('1')
+
+    const { result } = renderHook(() => useNotebookFiles())
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      result.current.deleteNotebook('1')
+    })
+
+    expect(result.current.files.length).toBe(0)
+    expect(result.current.activeFileId).toBeNull()
+  })
 })

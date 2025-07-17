@@ -13,6 +13,7 @@ export default function Page() {
     selectFile,
     getActiveFile,
     updateActiveFile,
+    deleteNotebook,
   } = useNotebookFiles()
 
   if (isLoading) {
@@ -33,10 +34,9 @@ export default function Page() {
         {activeFile ? (
           <Home
             key={activeFile.id}
-            initialTitle={activeFile.title}
-            initialCells={activeFile.cells}
-            initialMessages={activeFile.messages}
+            activeFile={activeFile}
             onUpdate={updateActiveFile}
+            onDelete={deleteNotebook}
           />
         ) : (
           <div className="flex items-center justify-center h-full">

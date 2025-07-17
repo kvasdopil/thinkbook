@@ -131,6 +131,27 @@ export const useNotebookFiles = () => {
     return files.find((f) => f.id === activeFileId) || null
   }, [files, activeFileId])
 
+  const deleteNotebook = useCallback(
+    async (id: string) => {
+      const updatedFiles = files.filter((file) => file.id !== id)
+      await saveFiles(updatedFiles)
+
+      if (activeFileId === id) {
+        if (updatedFiles.length > 0) {
+          const sortedFiles = [...updatedFiles].sort(
+            (a, b) =>
+              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          )
+          selectFile(sortedFiles[0].id)
+        } else {
+          setActiveFileId(null)
+          saveLastActiveFileId(null)
+        }
+      }
+    },
+    [files, activeFileId, saveFiles, selectFile]
+  )
+
   return {
     files,
     activeFileId,
@@ -139,5 +160,6 @@ export const useNotebookFiles = () => {
     updateActiveFile,
     selectFile,
     getActiveFile,
+    deleteNotebook,
   }
 }

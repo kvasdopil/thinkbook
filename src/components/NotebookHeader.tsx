@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
-import { FaCog } from 'react-icons/fa';
+import { FaCog, FaTrash } from 'react-icons/fa';
 
 interface NotebookHeaderProps {
   title: string;
   onTitleChange: (newTitle: string) => void;
   onSettingsClick: () => void;
+  onDeleteClick: () => void;
 }
 
 export const NotebookHeader = ({
   title,
   onTitleChange,
   onSettingsClick,
+  onDeleteClick,
 }: NotebookHeaderProps) => {
   const [currentTitle, setCurrentTitle] = useState(title);
 
@@ -28,6 +30,12 @@ export const NotebookHeader = ({
     }
   };
 
+  const handleDelete = () => {
+    if (window.confirm('Delete this notebook? This action cannot be undone.')) {
+      onDeleteClick();
+    }
+  };
+
   return (
     <header className="flex items-center justify-between p-4">
       <input
@@ -38,9 +46,18 @@ export const NotebookHeader = ({
         className="text-3xl font-bold leading-tight outline-none bg-transparent"
         aria-label="Notebook Title"
       />
-      <button onClick={onSettingsClick} aria-label="Settings">
-        <FaCog />
-      </button>
+      <div className="flex items-center space-x-2">
+        <button onClick={onSettingsClick} aria-label="Settings">
+          <FaCog />
+        </button>
+        <button
+          onClick={handleDelete}
+          aria-label="Delete Notebook"
+          tabIndex={0}
+        >
+          <FaTrash />
+        </button>
+      </div>
     </header>
   );
 };
