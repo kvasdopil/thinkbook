@@ -46,14 +46,19 @@ export const NotebookHeader = ({
         className="text-3xl font-bold leading-tight outline-none bg-transparent"
         aria-label="Notebook Title"
       />
-      <div className="flex items-center space-x-2">
-        <button onClick={onSettingsClick} aria-label="Settings">
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={onSettingsClick}
+          aria-label="Settings"
+          className="text-gray-500 hover:opacity-75"
+        >
           <FaCog />
         </button>
         <button
           onClick={handleDelete}
           aria-label="Delete Notebook"
           tabIndex={0}
+          className="text-gray-500 hover:opacity-75"
         >
           <FaTrash />
         </button>
