@@ -30,7 +30,7 @@ export default function Page() {
         onNewFile={createNewFile}
         onFileSelect={selectFile}
       />
-      <main className="flex-1">
+      <div className="flex-1">
         {activeFile ? (
           <Home
             key={activeFile.id}
@@ -48,7 +48,7 @@ export default function Page() {
             </button>
           </div>
         )}
-      </main>
+      </div>
     </div>
   )
 }

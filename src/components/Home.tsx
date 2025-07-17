@@ -460,15 +460,17 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
       />
 
       {/* Unified Conversation View */}
-      <ConversationList
-        items={conversationItems}
-        cellOperations={cellOperations}
-        isWorkerReady={isWorkerReady}
-        isStopping={isStopping}
-        sharedArrayBufferSupported={sharedArrayBufferSupported}
-        isLoading={isLoading}
-      />
-      {status}
+      <div className="flex-1 overflow-y-auto">
+        <ConversationList
+          items={conversationItems}
+          cellOperations={cellOperations}
+          isWorkerReady={isWorkerReady}
+          isStopping={isStopping}
+          sharedArrayBufferSupported={sharedArrayBufferSupported}
+          isLoading={isLoading}
+        />
+        {status}
+      </div>
 
       {/* Fixed Chat Input */}
       <FixedChatInput
