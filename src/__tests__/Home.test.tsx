@@ -11,47 +11,42 @@ jest.mock('../components/FixedChatInput', () => () => <div>Mock Fixed Chat Input
 const mockUseNotebookFiles = useNotebookFiles as jest.Mock;
 
 describe('Home', () => {
-  beforeEach(() => {
-    mockUseNotebookFiles.mockReturnValue({
-      files: [],
-      activeFileId: null,
-      isLoading: false,
-      createNewFile: jest.fn(),
-      selectFile: jest.fn(),
-      getActiveFile: () => ({
-        id: '1',
-        title: 'Test File',
-        cells: [],
-        messages: [],
-        createdAt: '',
-        updatedAt: '',
-      }),
-      updateActiveFile: jest.fn(),
-    });
-  });
+  const mockActiveFile = {
+    id: '1',
+    title: 'Test Title',
+    cells: [],
+    messages: [],
+    createdAt: '2023-01-01T00:00:00.000Z',
+    updatedAt: '2023-01-01T00:00:00.000Z',
+  }
+
+  const mockOnUpdate = jest.fn()
+  const mockOnDelete = jest.fn()
 
   it('renders the notebook header with the correct title', () => {
     render(
       <Home
-        initialTitle="Test Title"
-        initialCells={[]}
-        initialMessages={[]}
-        onUpdate={() => {}}
+        activeFile={mockActiveFile}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
       />
-    );
-    expect(screen.getByDisplayValue('Test Title')).toBeInTheDocument();
-  });
+    )
+    expect(screen.getByDisplayValue('Test Title')).toBeInTheDocument()
+  })
 
   it('renders the conversation and input components', () => {
     render(
       <Home
-        initialTitle="Test Title"
-        initialCells={[]}
-        initialMessages={[]}
-        onUpdate={() => {}}
+        activeFile={mockActiveFile}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
       />
-    );
-    expect(screen.getByText('Mock Conversation List Component')).toBeInTheDocument();
-    expect(screen.getByText('Mock Fixed Chat Input Component')).toBeInTheDocument();
-  });
-});
+    )
+    expect(
+      screen.getByText('Mock Conversation List Component')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Mock Fixed Chat Input Component')
+    ).toBeInTheDocument()
+  })
+})

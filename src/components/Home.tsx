@@ -18,21 +18,18 @@ import { executeSql } from '@/ai-functions/execute-sql'
 import { describeSnowflakeTable } from '@/ai-functions/describe-snowflake-table'
 import type { UpdateCellParams, CreateCodeCellParams } from '@/ai-functions'
 import { NotebookFile } from './FilePanel'
+import { useNotebookFiles } from '@/hooks/useNotebookFiles'
 
 interface HomeProps {
-  initialTitle: string
-  initialCells: CellData[]
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  initialMessages: any[] // TODO: Replace with MessagePart[]
+  activeFile: NotebookFile | null
   onUpdate: (update: Partial<Omit<NotebookFile, 'id' | 'createdAt'>>) => void
+  onDelete: (id: string) => void
 }
 
-export default function Home({
-  initialTitle,
-  initialCells,
-  initialMessages,
-  onUpdate,
-}: HomeProps) {
+export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
+  const initialTitle = activeFile?.title || 'Untitled'
+  const initialCells = activeFile?.cells || []
+  const initialMessages = activeFile?.messages || []
   // Cells state - only store cells, not messages
   const [cells, setCells] = useState<CellData[]>(initialCells)
 
@@ -455,6 +452,11 @@ export default function Home({
         title={initialTitle}
         onTitleChange={(newTitle) => onUpdate({ title: newTitle })}
         onSettingsClick={() => setIsSettingsModalOpen(true)}
+        onDeleteClick={() => {
+          if (activeFile) {
+            onDelete(activeFile.id)
+          }
+        }}
       />
 
       {/* Unified Conversation View */}
