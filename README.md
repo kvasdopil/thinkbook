@@ -179,3 +179,8 @@
   - **State Management**: The `Home` component now gets its state from the `useNotebookFiles` hook, and all modifications are persisted.
   - **Persistence**: The application state is saved to `localforage`, and the last active file is reopened on page load.
   - **Testing**: Added tests for the `FilePanel` component and the `useNotebookFiles` hook.
+
+- **0017.NON_INTRUSIVE_UPDATED_AT.md**: Implemented non-intrusive `updatedAt` handling for notebook files. The implementation includes:
+  - **Deep-Equality Check**: The `updatedAt` timestamp is now only updated when the file's contents (cells, messages, title) have actually changed.
+  - **Lodash Integration**: Used `lodash/isEqual` for performant and reliable deep-equality checks.
+  - **Comprehensive Testing**: Added unit tests to cover various scenarios, including no-change, title change, cell change, and message change.

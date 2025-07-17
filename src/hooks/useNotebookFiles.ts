@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { NotebookFile } from '../components/FilePanel'
-import { ConversationItem } from '@/types/conversation'
 import {
   saveNotebookFiles,
   loadNotebookFiles,
   saveLastActiveFileId,
   loadLastActiveFileId,
 } from '../utils/storage'
+import isEqual from 'lodash/isEqual'
 
 export const useNotebookFiles = () => {
   const [files, setFiles] = useState<NotebookFile[]>([])
@@ -66,33 +66,56 @@ export const useNotebookFiles = () => {
     (updatedContent: Partial<Omit<NotebookFile, 'id' | 'createdAt'>>) => {
       if (!activeFileId) return
 
-      const updatedFiles = files.map((file) => {
-        if (file.id === activeFileId) {
-          const updatedFile = {
-            ...file,
-            ...updatedContent,
-            updatedAt: new Date().toISOString(),
-          }
-          // Update title if first cell's content changes
-          if (
-            updatedContent.cells &&
-            updatedContent.cells.length > 0 &&
-            updatedContent.cells[0].content
-          ) {
-            const firstCellContent = updatedContent.cells[0].content
-            const newTitle =
-              firstCellContent
-                .split('\n')[0]
-                .replace(/^#+\s*/, '')
-                .trim() || 'Untitled'
-            if (newTitle) {
-              updatedFile.title = newTitle
-            }
-          }
-          return updatedFile
+      const currentFile = files.find((file) => file.id === activeFileId)
+      if (!currentFile) return
+
+      const updatedFile = {
+        ...currentFile,
+        ...updatedContent,
+      }
+
+      // Update title if first cell's content changes
+      if (
+        updatedContent.cells &&
+        updatedContent.cells.length > 0 &&
+        updatedContent.cells[0].content
+      ) {
+        const firstCellContent = updatedContent.cells[0].content
+        const newTitle =
+          firstCellContent
+            .split('\n')[0]
+            .replace(/^#+\s*/, '')
+            .trim() || 'Untitled'
+        if (newTitle) {
+          updatedFile.title = newTitle
         }
-        return file
+      }
+
+      const relevantFields = (
+        file: Omit<NotebookFile, 'id' | 'createdAt' | 'updatedAt'>
+      ) => ({
+        title: file.title,
+        messages: file.messages,
+        cells: file.cells.map((cell) => ({
+          text: cell.text,
+          type: cell.type,
+        })),
       })
+
+      const hasChanged = !isEqual(
+        relevantFields(currentFile),
+        relevantFields(updatedFile)
+      )
+
+      if (!hasChanged) {
+        return
+      }
+
+      updatedFile.updatedAt = new Date().toISOString()
+
+      const updatedFiles = files.map((file) =>
+        file.id === activeFileId ? updatedFile : file
+      )
 
       saveFiles(updatedFiles)
     },

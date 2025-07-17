@@ -19,6 +19,11 @@ describe('useNotebookFiles', () => {
   beforeEach(() => {
     ;(localforage.getItem as jest.Mock).mockClear()
     ;(localforage.setItem as jest.Mock).mockClear()
+    jest.useFakeTimers()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
   })
 
   it('should load files from localforage on initial render', async () => {
@@ -99,6 +104,208 @@ describe('useNotebookFiles', () => {
     })
 
     expect(result.current.files[0].title).toBe('Updated Title')
+  })
+
+  it('should not update "updatedAt" if content is the same', async () => {
+    const initialDate = new Date().toISOString()
+    const mockFiles = {
+      '1': {
+        id: '1',
+        title: 'Test File',
+        cells: [],
+        messages: [],
+        createdAt: initialDate,
+        updatedAt: initialDate,
+      },
+    }
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce(mockFiles)
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce('1')
+
+    const { result } = renderHook(() => useNotebookFiles())
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      result.current.updateActiveFile({ title: 'Test File' })
+    })
+
+    expect(result.current.files[0].updatedAt).toBe(initialDate)
+  })
+
+  it('should update "updatedAt" when title changes', async () => {
+    const initialDate = new Date('2023-01-01T00:00:00.000Z').toISOString()
+    const mockFiles = {
+      '1': {
+        id: '1',
+        title: 'Test File',
+        cells: [],
+        messages: [],
+        createdAt: initialDate,
+        updatedAt: initialDate,
+      },
+    }
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce(mockFiles)
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce('1')
+
+    const { result } = renderHook(() => useNotebookFiles())
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000)
+      result.current.updateActiveFile({ title: 'New Title' })
+    })
+
+    expect(result.current.files[0].updatedAt).not.toBe(initialDate)
+  })
+
+  it('should update "updatedAt" when cells change', async () => {
+    const initialDate = new Date('2023-01-01T00:00:00.000Z').toISOString()
+    const mockFiles = {
+      '1': {
+        id: '1',
+        title: 'Test File',
+        cells: [],
+        messages: [],
+        createdAt: initialDate,
+        updatedAt: initialDate,
+      },
+    }
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce(mockFiles)
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce('1')
+
+    const { result } = renderHook(() => useNotebookFiles())
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000)
+      result.current.updateActiveFile({
+        cells: [{ id: 'cell1', content: 'new content' }],
+      })
+    })
+
+    expect(result.current.files[0].updatedAt).not.toBe(initialDate)
+  })
+
+  it('should update "updatedAt" when messages change', async () => {
+    const initialDate = new Date('2023-01-01T00:00:00.000Z').toISOString()
+    const mockFiles = {
+      '1': {
+        id: '1',
+        title: 'Test File',
+        cells: [],
+        messages: [],
+        createdAt: initialDate,
+        updatedAt: initialDate,
+      },
+    }
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce(mockFiles)
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce('1')
+
+    const { result } = renderHook(() => useNotebookFiles())
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000)
+      result.current.updateActiveFile({
+        messages: [{ role: 'user', content: 'new message' }],
+      })
+    })
+
+    expect(result.current.files[0].updatedAt).not.toBe(initialDate)
+  })
+
+  it('should not update "updatedAt" when code visibility changes', async () => {
+    const initialDate = new Date().toISOString()
+    const mockFiles = {
+      '1': {
+        id: '1',
+        title: 'Test File',
+        cells: [{ id: 'cell1', isCodeVisible: false }],
+        messages: [],
+        createdAt: initialDate,
+        updatedAt: initialDate,
+      },
+    }
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce(mockFiles)
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce('1')
+
+    const { result } = renderHook(() => useNotebookFiles())
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      result.current.updateActiveFile({
+        cells: [{ id: 'cell1', isCodeVisible: true }],
+      })
+    })
+
+    expect(result.current.files[0].updatedAt).toBe(initialDate)
+  })
+
+  it('should not update "updatedAt" when execution status changes', async () => {
+    const initialDate = new Date().toISOString()
+    const mockFiles = {
+      '1': {
+        id: '1',
+        title: 'Test File',
+        cells: [{ id: 'cell1', executionStatus: 'idle' }],
+        messages: [],
+        createdAt: initialDate,
+        updatedAt: initialDate,
+      },
+    }
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce(mockFiles)
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce('1')
+
+    const { result } = renderHook(() => useNotebookFiles())
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      result.current.updateActiveFile({
+        cells: [{ id: 'cell1', executionStatus: 'running' }],
+      })
+    })
+
+    expect(result.current.files[0].updatedAt).toBe(initialDate)
+  })
+
+  it('should not update "updatedAt" when output changes', async () => {
+    const initialDate = new Date().toISOString()
+    const mockFiles = {
+      '1': {
+        id: '1',
+        title: 'Test File',
+        cells: [{ id: 'cell1', output: '' }],
+        messages: [],
+        createdAt: initialDate,
+        updatedAt: initialDate,
+      },
+    }
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce(mockFiles)
+    ;(localforage.getItem as jest.Mock).mockResolvedValueOnce('1')
+
+    const { result } = renderHook(() => useNotebookFiles())
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      result.current.updateActiveFile({
+        cells: [{ id: 'cell1', output: 'new output' }],
+      })
+    })
+
+    expect(result.current.files[0].updatedAt).toBe(initialDate)
   })
 
   it('should select a file', async () => {
