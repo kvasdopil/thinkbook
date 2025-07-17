@@ -1,32 +1,50 @@
-import React from 'react';
-import { FaPlus } from 'react-icons/fa';
-import { formatRelative } from 'date-fns';
+import React from 'react'
+import { FaPlus } from 'react-icons/fa'
+import { format, isToday, isYesterday } from 'date-fns'
 
 export interface NotebookFile {
-  id: string;
-  createdAt: string;
-  updatedAt: string;
-  title: string;
-  cells: any[]; // Replace with actual Cell type
-  messages: any[]; // Replace with actual MessagePart type
+  id: string
+  createdAt: string
+  updatedAt: string
+  title: string
+  cells: any[] // Replace with actual Cell type
+  messages: any[] // Replace with actual MessagePart type
 }
 
 interface FilePanelProps {
-  files: NotebookFile[];
-  activeFileId: string | null;
-  onNewFile: () => void;
-  onFileSelect: (id: string) => void;
+  files: NotebookFile[]
+  activeFileId: string | null
+  onNewFile: () => void
+  onFileSelect: (id: string) => void
 }
 
-const FilePanel: React.FC<FilePanelProps> = ({ files, activeFileId, onNewFile, onFileSelect }) => {
-  const groupedFiles = files.reduce((acc, file) => {
-    const group = formatRelative(new Date(file.updatedAt), new Date());
-    if (!acc[group]) {
-      acc[group] = [];
-    }
-    acc[group].push(file);
-    return acc;
-  }, {} as Record<string, NotebookFile[]>);
+const FilePanel: React.FC<FilePanelProps> = ({
+  files,
+  activeFileId,
+  onNewFile,
+  onFileSelect,
+}) => {
+  const groupedFiles = files.reduce(
+    (acc, file) => {
+      const updatedAt = new Date(file.updatedAt)
+      let group
+
+      if (isToday(updatedAt)) {
+        group = 'Today'
+      } else if (isYesterday(updatedAt)) {
+        group = 'Yesterday'
+      } else {
+        group = format(updatedAt, 'MMMM d, yyyy')
+      }
+
+      if (!acc[group]) {
+        acc[group] = []
+      }
+      acc[group].push(file)
+      return acc
+    },
+    {} as Record<string, NotebookFile[]>
+  )
 
   return (
     <div className="w-64 bg-gray-100 p-4">
@@ -42,12 +60,14 @@ const FilePanel: React.FC<FilePanelProps> = ({ files, activeFileId, onNewFile, o
           <div key={group}>
             <h2 className="text-sm font-semibold text-gray-500">{group}</h2>
             <ul className="mt-2 space-y-1">
-              {files.map(file => (
+              {files.map((file) => (
                 <li
                   key={file.id}
                   onClick={() => onFileSelect(file.id)}
                   className={`p-2 rounded cursor-pointer ${
-                    activeFileId === file.id ? 'bg-blue-200' : 'hover:bg-gray-200'
+                    activeFileId === file.id
+                      ? 'bg-blue-200'
+                      : 'hover:bg-gray-200'
                   }`}
                 >
                   <div className="font-semibold">{file.title}</div>
@@ -61,7 +81,7 @@ const FilePanel: React.FC<FilePanelProps> = ({ files, activeFileId, onNewFile, o
         ))}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default FilePanel;
+export default FilePanel
