@@ -30,15 +30,27 @@ describe('Home', () => {
     });
   });
 
-  it('renders the main title', () => {
-    render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      '🐍 Python Notebook with AI Assistant'
+  it('renders the notebook header with the correct title', () => {
+    render(
+      <Home
+        initialTitle="Test Title"
+        initialCells={[]}
+        initialMessages={[]}
+        onUpdate={() => {}}
+      />
     );
+    expect(screen.getByDisplayValue('Test Title')).toBeInTheDocument();
   });
 
   it('renders the conversation and input components', () => {
-    render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />);
+    render(
+      <Home
+        initialTitle="Test Title"
+        initialCells={[]}
+        initialMessages={[]}
+        onUpdate={() => {}}
+      />
+    );
     expect(screen.getByText('Mock Conversation List Component')).toBeInTheDocument();
     expect(screen.getByText('Mock Fixed Chat Input Component')).toBeInTheDocument();
   });
