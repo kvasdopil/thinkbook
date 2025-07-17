@@ -20,22 +20,27 @@ import type { UpdateCellParams, CreateCodeCellParams } from '@/ai-functions'
 import { NotebookFile } from './FilePanel'
 
 interface HomeProps {
-  initialCells: CellData[];
-  initialMessages: any[]; // Replace with MessagePart[]
-  onUpdate: (update: Partial<Omit<NotebookFile, 'id' | 'createdAt'>>) => void;
+  initialCells: CellData[]
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  initialMessages: any[] // TODO: Replace with MessagePart[]
+  onUpdate: (update: Partial<Omit<NotebookFile, 'id' | 'createdAt'>>) => void
 }
 
-export default function Home({ initialCells, initialMessages, onUpdate }: HomeProps) {
+export default function Home({
+  initialCells,
+  initialMessages,
+  onUpdate,
+}: HomeProps) {
   // Cells state - only store cells, not messages
-  const [cells, setCells] = useState<CellData[]>(initialCells);
+  const [cells, setCells] = useState<CellData[]>(initialCells)
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      onUpdate({ cells });
-    }, 500); // Debounce updates
+      onUpdate({ cells })
+    }, 500) // Debounce updates
 
-    return () => clearTimeout(timeoutId);
-  }, [cells, onUpdate]);
+    return () => clearTimeout(timeoutId)
+  }, [cells, onUpdate])
 
   const [isWorkerReady, setIsWorkerReady] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
@@ -67,7 +72,7 @@ export default function Home({ initialCells, initialMessages, onUpdate }: HomePr
   const runningCellRef = useRef<string | null>(null)
 
   // AI Chat integration
-  const { status, messages, setMessages, input, setInput, handleSubmit, isLoading } =
+  const { status, messages, input, setInput, handleSubmit, isLoading } =
     useChat({
       initialMessages: initialMessages,
       api: '/api/chat',
@@ -75,10 +80,9 @@ export default function Home({ initialCells, initialMessages, onUpdate }: HomePr
       headers: {
         'x-gemini-api-key': apiKey || '',
       },
-      onFinish: (message) => {
-        const newMessages = [...messages, message];
-        setMessages(newMessages);
-        onUpdate({ messages: newMessages });
+      // We persist messages via a dedicated useEffect to avoid duplications.
+      onFinish: () => {
+        /* No-op: persistence handled in useEffect below */
       },
       async onToolCall({ toolCall }) {
         try {
@@ -200,6 +204,14 @@ export default function Home({ initialCells, initialMessages, onUpdate }: HomePr
 
     return items
   }, [messages, cells])
+
+  // Persist messages debounced whenever they change
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      onUpdate({ messages })
+    }, 500)
+    return () => clearTimeout(timeoutId)
+  }, [messages, onUpdate])
 
   // Initialize worker
   useEffect(() => {
@@ -417,16 +429,7 @@ export default function Home({ initialCells, initialMessages, onUpdate }: HomePr
   // Handle form submission
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const newMessages = [...messages, { id: 'temp-user', role: 'user', content: input, createdAt: new Date() }];
-    setMessages(newMessages);
-    onUpdate({ messages: newMessages });
-    handleSubmit(e, {
-        options: {
-            body: {
-                // Pass any additional data to the API
-            }
-        }
-    })
+    handleSubmit(e)
   }
 
   // Handle input changes

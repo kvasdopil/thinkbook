@@ -1,8 +1,8 @@
-'use client';
+'use client'
 
-import Home from '@/components/Home';
-import FilePanel from '@/components/FilePanel';
-import { useNotebookFiles } from '@/hooks/useNotebookFiles';
+import Home from '@/components/Home'
+import FilePanel from '@/components/FilePanel'
+import { useNotebookFiles } from '@/hooks/useNotebookFiles'
 
 export default function Page() {
   const {
@@ -13,13 +13,13 @@ export default function Page() {
     selectFile,
     getActiveFile,
     updateActiveFile,
-  } = useNotebookFiles();
+  } = useNotebookFiles()
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div>Loading...</div>
   }
 
-  const activeFile = getActiveFile();
+  const activeFile = getActiveFile()
 
   return (
     <div className="flex h-screen">
@@ -34,7 +34,7 @@ export default function Page() {
           <Home
             key={activeFile.id}
             initialCells={activeFile.cells}
-            initialMessages={active.messages}
+            initialMessages={activeFile.messages}
             onUpdate={updateActiveFile}
           />
         ) : (
@@ -49,5 +49,5 @@ export default function Page() {
         )}
       </main>
     </div>
-  );
+  )
 }
