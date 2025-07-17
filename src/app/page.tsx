@@ -33,6 +33,7 @@ export default function Page() {
         {activeFile ? (
           <Home
             key={activeFile.id}
+            initialTitle={activeFile.title}
             initialCells={activeFile.cells}
             initialMessages={activeFile.messages}
             onUpdate={updateActiveFile}

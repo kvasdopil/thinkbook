@@ -184,3 +184,10 @@
   - **Deep-Equality Check**: The `updatedAt` timestamp is now only updated when the file's contents (cells, messages, title) have actually changed.
   - **Lodash Integration**: Used `lodash/isEqual` for performant and reliable deep-equality checks.
   - **Comprehensive Testing**: Added unit tests to cover various scenarios, including no-change, title change, cell change, and message change.
+
+- **0018.NOTEBOOK_TITLE.md**: Implemented an editable notebook title. The implementation includes:
+  - **NotebookHeader Component**: A new component to display and edit the notebook title.
+  - **Editable Title**: The title is an input field that looks like an H1, and it's focused on click.
+  - **Persistence**: Title changes are persisted on blur, updating the file's `title` and `updatedAt` properties.
+  - **Settings Icon**: A settings icon is included in the header to open the settings modal.
+  - **Comprehensive Testing**: Added unit tests for the `NotebookHeader` component.

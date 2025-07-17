@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useChat } from 'ai/react'
-import { FiSettings } from 'react-icons/fi'
 import type { CellData, CellOperations } from '@/types/cell'
 import { createNewCell } from '@/types/cell'
 import { ConversationItem } from '@/types/conversation'
@@ -10,6 +9,7 @@ import type { PyodideResponse } from '@/types/worker'
 import ConversationList from '@/components/ConversationList'
 import FixedChatInput from '@/components/FixedChatInput'
 import SettingsModal from '@/components/SettingsModal'
+import { NotebookHeader } from '@/components/NotebookHeader'
 import { useGeminiApiKey } from '@/hooks/useGeminiApiKey'
 import { useSnowflakeConfig } from '@/hooks/useSnowflakeConfig'
 import { executeUpdateCell } from '@/ai-functions/update-cell'
@@ -20,6 +20,7 @@ import type { UpdateCellParams, CreateCodeCellParams } from '@/ai-functions'
 import { NotebookFile } from './FilePanel'
 
 interface HomeProps {
+  initialTitle: string
   initialCells: CellData[]
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   initialMessages: any[] // TODO: Replace with MessagePart[]
@@ -27,6 +28,7 @@ interface HomeProps {
 }
 
 export default function Home({
+  initialTitle,
   initialCells,
   initialMessages,
   onUpdate,
@@ -449,21 +451,11 @@ export default function Home({
 
   return (
     <main className="flex flex-col h-screen bg-white">
-      {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-300">
-        <div className="container mx-auto max-w-4xl px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">
-            🐍 Python Notebook with AI Assistant
-          </h1>
-          <button
-            onClick={() => setIsSettingsModalOpen(true)}
-            className="p-2 rounded-md hover:bg-gray-100"
-            aria-label="Settings"
-          >
-            <FiSettings className="w-6 h-6 text-gray-600" />
-          </button>
-        </div>
-      </div>
+      <NotebookHeader
+        title={initialTitle}
+        onTitleChange={(newTitle) => onUpdate({ title: newTitle })}
+        onSettingsClick={() => setIsSettingsModalOpen(true)}
+      />
 
       {/* Unified Conversation View */}
       <ConversationList
