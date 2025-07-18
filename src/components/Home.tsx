@@ -472,18 +472,17 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
         {status}
       </div>
 
-      {/* Fixed Chat Input */}
-      <FixedChatInput
-        input={input}
-        isLoading={isLoading}
-        onInputChange={handleInputChange}
-        onSubmit={onSubmit}
-        onKeyDown={handleKeyDown}
-        onAddCell={cellOperations.addCell}
-      />
-
-      {/* Bottom padding to account for fixed input */}
-      <div className="h-24" />
+      {/* Chat Input */}
+      <div className="p-4">
+        <FixedChatInput
+          input={input}
+          isLoading={isLoading}
+          onInputChange={handleInputChange}
+          onSubmit={onSubmit}
+          onKeyDown={handleKeyDown}
+          onAddCell={cellOperations.addCell}
+        />
+      </div>
 
       <SettingsModal
         isOpen={isSettingsModalOpen}
