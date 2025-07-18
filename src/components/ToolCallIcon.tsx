@@ -11,25 +11,33 @@ const ToolCallIcon: React.FC<ToolCallIconProps> = ({ toolCall }) => {
 
   const { toolName, args, result, error } = toolCall;
 
-  const getStatus = () => {
-    if (error) return 'failure';
-    if (result) return 'success';
-    // Simplified logic: how to determine 'cancelled' is not clear from the provided data
-    return 'in-progress';
-  };
+  const mapStatus = (state?: string) => {
+    switch (state) {
+      case 'call':
+        return 'in-progress';
+      case 'result':
+        return error ? 'failure' : 'success';
+      case 'error':
+        return 'failure';
+      case 'cancelled':
+        return 'cancelled';
+      default:
+        return 'in-progress';
+    }
+  }
 
-  const status = getStatus();
+  const status = mapStatus(toolCall.state);
 
   const getIcon = () => {
     switch (status) {
       case 'success':
-        return <FaCheckCircle className="text-green-500" />;
+        return <FaCheckCircle className="text-green-600" />;
       case 'failure':
-        return <FaTimesCircle className="text-red-500" />;
+        return <FaTimesCircle className="text-red-600" />;
       case 'in-progress':
-        return <FaSpinner className="text-blue-500 animate-spin" />;
+        return <FaSpinner className="text-blue-600 animate-spin" />;
       case 'cancelled':
-        return <FaMinusCircle className="text-orange-500" />;
+        return <FaMinusCircle className="text-orange-600" />;
       default:
         return null;
     }
@@ -55,12 +63,14 @@ const ToolCallIcon: React.FC<ToolCallIconProps> = ({ toolCall }) => {
         <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded w-full">
           <pre className="text-xs whitespace-pre-wrap">
             <code>
-              <strong>Tool:</strong> {toolName}
+              <strong>Request parameters:</strong>
               <br />
-              <strong>Arguments:</strong> {JSON.stringify(args, null, 2)}
+              {JSON.stringify(args, null, 2)}
               <br />
-              {result && <><strong>Result:</strong> {JSON.stringify(result, null, 2)}</>}
-              {error && <><strong>Error:</strong> {error}</>}
+              <strong>Result:</strong>
+              <br />
+              {result && <>{JSON.stringify(result, null, 2)}</>}
+              {error && <>{error}</>}
             </code>
           </pre>
         </div>

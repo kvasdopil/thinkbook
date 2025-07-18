@@ -207,5 +207,6 @@
   - **ToolCallIcon Component**: A new component to render tool calls as status icons.
   - **Status Icons**: Icons for success, failure, in-progress, and cancelled states.
   - **Hover and Click Interactions**: Hovering an icon shows a tooltip, and clicking toggles a collapsible panel with the full JSON payload.
-  - **Accessibility**: Icons and panels are keyboard-accessible.
-  - **Comprehensive Testing**: Added unit tests for the `ToolCallIcon` component and updated existing tests.
+  - **Accessibility**: Icons and panels are keyboard-accessible with improved color contrast.
+  - **Comprehensive Testing**: Added unit tests for the `ToolCallIcon` component and updated existing tests to cover all acceptance criteria.
+  - **UI Polish**: The collapsible panel now separates "Request parameters" and "Result / Error" for clarity.
