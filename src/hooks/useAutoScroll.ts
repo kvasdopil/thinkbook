@@ -1,13 +1,18 @@
 import { useEffect, useRef } from 'react';
 
-interface UseAutoScrollOptions<T> {
-  dependency: T[];
+interface UseAutoScrollOptions {
+  dependency: unknown[];
 }
 
-export const useAutoScroll = <T>({ dependency }: UseAutoScrollOptions<T>) => {
+export const useAutoScroll = ({ dependency }: UseAutoScrollOptions) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prevLength = useRef(dependency.length);
 
   useEffect(() => {
+    const added = dependency.length > prevLength.current;
+    prevLength.current = dependency.length;
+    if (!added) return;
+
     if (scrollRef.current) {
       const { scrollHeight, clientHeight, scrollTop } = scrollRef.current;
       const isScrolledToBottom = scrollHeight - clientHeight <= scrollTop + 1;

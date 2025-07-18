@@ -207,4 +207,4 @@
   - **Custom Hook**: A new `useAutoScroll` hook to manage the auto-scrolling logic.
   - **Smooth Scrolling**: The scrolling is smooth and respects the user's reduced-motion preference.
   - **Conditional Scrolling**: The auto-scroll only triggers when new items are added, and not on modifications or deletions.
-  - **Comprehensive Testing**: Added unit tests for the `useAutoScroll` hook.
+  - **Comprehensive Testing**: Added unit tests for the `useAutoScroll` hook to cover all scenarios.
