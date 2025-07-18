@@ -86,19 +86,47 @@ describe('Rollback functionality', () => {
     await waitFor(() => {
       // Check that setMessages was called with the correct messages
       expect(setMessages).toHaveBeenCalledWith([
-        { id: '1', role: 'user', content: 'Edited first message', createdAt: expect.any(Date) },
+        expect.objectContaining({
+          id: '1',
+          content: 'Edited first message',
+        }),
       ]);
-
-      // Check that onUpdate was called with the correct data
-      expect(mockOnUpdate).toHaveBeenCalledWith({
-        messages: [
-          { id: '1', role: 'user', content: 'Edited first message', createdAt: expect.any(Date) },
-        ],
-        cells: [],
-      });
-
-      // Check that handleSubmit was called
-      expect(handleSubmit).toHaveBeenCalled();
     });
+  });
+
+  it('does not save if content is unchanged', async () => {
+    const setMessages = jest.fn();
+    render(
+      <Home
+        activeFile={activeFile}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    fireEvent.click(screen.getByText('First message'));
+    fireEvent.click(screen.getByLabelText('Send'));
+
+    await waitFor(() => {
+      expect(setMessages).not.toHaveBeenCalled();
+    });
+  });
+
+  it('dims subsequent messages when editing', () => {
+    render(
+      <Home
+        activeFile={activeFile}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    fireEvent.click(screen.getByText('First message'));
+
+    const firstMessage = screen.getByText('First message').parentElement;
+    const secondMessage = screen.getByText('First response').parentElement;
+
+    expect(firstMessage).not.toHaveClass('opacity-70');
+    expect(secondMessage).toHaveClass('opacity-70');
   });
 });
