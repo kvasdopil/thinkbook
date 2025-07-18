@@ -31,7 +31,7 @@ export default function FixedChatInput({
   }, [input])
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 p-4">
+    <div className="bg-white border-t border-gray-300">
       <div className="container mx-auto max-w-4xl">
         <form onSubmit={onSubmit} className="flex items-end gap-3">
           {/* Add Cell Button */}
