@@ -519,6 +519,10 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
             if (messageIndex === -1) return;
 
             // Create a new message object with the updated content
+            if (messages[messageIndex].content === newContent) {
+              setEditingMessageId(null);
+              return;
+            }
             const updatedMessage = {
               ...messages[messageIndex],
               content: newContent,
@@ -533,10 +537,10 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
                   item.type === 'message' && item.data.id === messageId
               ) + 1
             );
-            const newCells = cells.filter((cell) =>
-              conversationItemsUpToMessage.some(
-                (item) => item.type === 'cell' && item.data.id === cell.id
-              )
+            const newCells = cells.filter(
+              (cell) =>
+                newMessages.some((m) => m.id === cell.parentId) ||
+                !cell.parentId
             );
 
             const newMessagesWithUpdate = [...newMessages, updatedMessage];
@@ -557,6 +561,13 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
             setEditingMessageId(null);
           }}
         />
+        {isLoading && editingMessageId === null && (
+          <div className="flex justify-start p-4">
+            <div className="bg-gray-100 text-gray-800 max-w-[80%] rounded-lg px-3 py-2">
+              <div className="text-sm italic opacity-70">typing...</div>
+            </div>
+          </div>
+        )}
         {status}
       </div>
 
@@ -564,7 +575,7 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
       <div className="p-4">
         <FixedChatInput
           input={input}
-          isLoading={isLoading}
+          isLoading={isLoading && editingMessageId === null}
           onInputChange={handleInputChange}
           onSubmit={onSubmit}
           onKeyDown={handleKeyDown}

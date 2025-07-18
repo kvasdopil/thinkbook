@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FaPaperPlane, FaTimes } from 'react-icons/fa';
 import { Message } from 'ai/react';
 import ReactMarkdown from 'react-markdown';
-import MarkdownComponents from './MarkdownComponents';
+import { MarkdownComponents } from './MarkdownComponents';
 import ToolCallDisplay from './ToolCallDisplay';
 
 interface MessageItemProps {
@@ -78,7 +78,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
     return (
       <div
         onClick={() => onStartEdit(message.id)}
-        className="p-2 cursor-pointer hover:bg-gray-100"
+        className="bg-blue-500 text-white p-2 rounded-lg max-w-[80%] self-end cursor-pointer hover:bg-blue-600"
       >
         {message.content}
       </div>
@@ -88,12 +88,21 @@ const MessageItem: React.FC<MessageItemProps> = ({
   // Assistant message
   return (
     <div className="bg-gray-100 p-2 rounded">
-      <ReactMarkdown components={MarkdownComponents}>
-        {message.content}
-      </ReactMarkdown>
-      {message.toolInvocations?.map((toolInvocation, index) => (
-        <ToolCallDisplay key={index} toolInvocation={toolInvocation} />
-      ))}
+      {message.parts.map((part, index) => {
+        if (part.type === 'text') {
+          return (
+            <ReactMarkdown key={index} components={MarkdownComponents}>
+              {part.text}
+            </ReactMarkdown>
+          );
+        }
+        if (part.type === 'tool-invocation') {
+          return (
+            <ToolCallDisplay key={index} toolInvocation={part.toolInvocation} />
+          );
+        }
+        return null;
+      })}
     </div>
   );
 };
