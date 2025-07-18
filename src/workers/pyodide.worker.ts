@@ -16,6 +16,9 @@ async function initializePyodide() {
       indexURL: 'https://cdn.jsdelivr.net/npm/pyodide@0.28.0/',
     })
 
+    // Load pandas
+    await pyodide.loadPackage('pandas')
+
     // Set up pending interrupt buffer if one was provided before initialization
     if (pendingInterruptBuffer) {
       console.log('[Worker] Setting up pending interrupt buffer')
@@ -72,9 +75,10 @@ function setInterruptBuffer(buffer: SharedArrayBuffer) {
   setInterruptBufferInternal(buffer)
 }
 
-async function executeCode(code: string) {
+async function executeCode(id: string, code: string) {
   if (!pyodide) {
     const response: PyodideResponse = {
+      id,
       type: 'error',
       error: 'Pyodide not initialized',
     }
@@ -87,6 +91,7 @@ async function executeCode(code: string) {
     // Set up JavaScript callbacks for streaming output
     pyodide.globals.set('_stream_stdout', (text: string) => {
       const response: PyodideResponse = {
+        id,
         type: 'output',
         output: {
           type: 'out',
@@ -99,6 +104,7 @@ async function executeCode(code: string) {
 
     pyodide.globals.set('_stream_stderr', (text: string) => {
       const response: PyodideResponse = {
+        id,
         type: 'output',
         output: {
           type: 'err',
@@ -109,10 +115,28 @@ async function executeCode(code: string) {
       self.postMessage(response)
     })
 
-    // Override print and sys.stderr to call our streaming functions
+    // New callback for displaying tables
+    pyodide.globals.set('_display_table', (df_json: string) => {
+      const { columns, data, index } = JSON.parse(df_json)
+      const response: PyodideResponse = {
+        id,
+        type: 'table',
+        table: {
+          columns,
+          data,
+          totalRows: index.length, // Use full index length for total count
+        },
+      }
+      console.log('[Worker] Sending table response:', response)
+      self.postMessage(response)
+    })
+
+    // Override print, stderr, and add display to call our streaming functions
     pyodide.runPython(`
 import sys
 import builtins
+import pandas as pd
+import json
 
 # Store original functions
 _original_print = builtins.print
@@ -121,18 +145,10 @@ _original_stderr_write = sys.stderr.write
 def _streaming_print(*args, **kwargs):
     """Custom print function that streams output immediately"""
     import io
-    
-    # Create a StringIO to capture the formatted output
     output_buffer = io.StringIO()
-    
-    # Remove file parameter from kwargs if it exists and always use our buffer
     kwargs_copy = kwargs.copy()
     kwargs_copy['file'] = output_buffer
-    
-    # Call original print with our buffer
     _original_print(*args, **kwargs_copy)
-    
-    # Get the formatted output and send it via JavaScript callback
     output_text = output_buffer.getvalue()
     if output_text:
         _stream_stdout(output_text)
@@ -143,9 +159,32 @@ def _streaming_stderr_write(text):
         _stream_stderr(text)
     return len(text)
 
-# Replace print and sys.stderr.write with streaming versions
+def display(obj):
+    """Custom display function for notebook-like table rendering"""
+    if isinstance(obj, pd.DataFrame):
+        total_rows = len(obj)
+        # Get up to 50 rows for preview
+        df_preview = obj.head(50)
+
+        # Convert preview to JSON split format
+        df_json = df_preview.to_json(orient="split", index=False) # No index in data
+
+        # Parse and reconstruct for full JSON payload
+        parsed_json = json.loads(df_json)
+        full_payload = {
+            "columns": parsed_json['columns'],
+            "data": parsed_json['data'],
+            "index": list(range(total_rows)) # Use full length for totalRows
+        }
+        _display_table(json.dumps(full_payload))
+    else:
+        # Fallback to standard print for non-DataFrames
+        _original_print(obj)
+
+# Replace print, sys.stderr.write and add display
 builtins.print = _streaming_print
 sys.stderr.write = _streaming_stderr_write
+builtins.display = display
 `)
 
     try {
@@ -155,6 +194,7 @@ sys.stderr.write = _streaming_stderr_write
 
       // Send completion message
       const response: PyodideResponse = {
+        id,
         type: 'result',
         result: '', // Empty result since output was streamed
       }
@@ -165,6 +205,7 @@ sys.stderr.write = _streaming_stderr_write
       pyodide.runPython(`
 builtins.print = _original_print
 sys.stderr.write = _original_stderr_write
+del builtins.display
 `)
     }
   } catch (error) {
@@ -173,6 +214,7 @@ sys.stderr.write = _original_stderr_write
       pyodide.runPython(`
 builtins.print = _original_print
 sys.stderr.write = _original_stderr_write
+del builtins.display
 `)
     } catch {}
 
@@ -180,12 +222,14 @@ sys.stderr.write = _original_stderr_write
     const errorString = String(error)
     if (errorString.includes('KeyboardInterrupt')) {
       const response: PyodideResponse = {
+        id,
         type: 'execution-cancelled',
       }
       console.log('[Worker] Sending execution-cancelled response:', response)
       self.postMessage(response)
     } else {
       const response: PyodideResponse = {
+        id,
         type: 'error',
         error: errorString,
       }
@@ -197,7 +241,7 @@ sys.stderr.write = _original_stderr_write
 
 self.onmessage = async (event: MessageEvent<PyodideMessage>) => {
   console.log('[Worker] Received message:', event.data)
-  const { type, code, buffer } = event.data
+  const { type, id, code, buffer } = event.data
 
   switch (type) {
     case 'init':
@@ -205,12 +249,12 @@ self.onmessage = async (event: MessageEvent<PyodideMessage>) => {
       await initializePyodide()
       break
     case 'execute':
-      if (code) {
+      if (id && code) {
         console.log(
-          '[Worker] Processing execute message with code:',
+          `[Worker] Processing execute message for cell ${id} with code:`,
           code.slice(0, 100) + (code.length > 100 ? '...' : '')
         )
-        await executeCode(code)
+        await executeCode(id, code)
       }
       break
     case 'setInterruptBuffer':

@@ -6,12 +6,15 @@ export type ExecutionStatus =
   | 'failed'
   | 'cancelled'
 
+import type { TablePayload } from './worker'
+
 // Cell data structure for individual cells
 export interface CellData {
   id: string
   type: 'code' | 'markdown'
   text: string
   output: string
+  table?: TablePayload | null // Add table data to cell
   isCodeVisible: boolean
   executionStatus: ExecutionStatus
   parentId: string | null // ID of the parent message or tool call that created this cell (null if first item)

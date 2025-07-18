@@ -13,6 +13,7 @@ import {
 } from 'react-icons/fa'
 import type { CellData, CellOperations } from '../types/cell'
 import { getTopLevelComment } from '../types/cell'
+import TableDisplay from './TableDisplay'
 
 interface CellProps {
   cell: CellData
@@ -47,7 +48,7 @@ export default function Cell({
   // Scroll to bottom when output changes
   useEffect(() => {
     scrollToBottomIfNeeded()
-  }, [cell.output])
+  }, [cell.output, cell.table])
 
   const handleCodeChange = (value: string | undefined) => {
     const newCode = value || ''
@@ -219,13 +220,16 @@ export default function Cell({
             </span>
           )}
         </div>
-        <div className="p-4 bg-gray-50 min-h-32 max-h-96 overflow-y-auto">
-          <pre
-            ref={outputRef}
-            className="text-sm font-mono whitespace-pre-wrap text-gray-800"
-          >
-            {cell.output}
-          </pre>
+        <div
+          ref={outputRef}
+          className="p-4 bg-gray-50 min-h-32 max-h-96 overflow-y-auto"
+        >
+          {cell.output && (
+            <pre className="text-sm font-mono whitespace-pre-wrap text-gray-800">
+              {cell.output}
+            </pre>
+          )}
+          {cell.table && <TableDisplay table={cell.table} />}
         </div>
       </div>
     </div>
