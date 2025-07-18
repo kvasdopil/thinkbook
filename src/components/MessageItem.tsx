@@ -58,10 +58,12 @@ export default function MessageItem({ message }: MessageItemProps) {
         // Use the part directly as it already has the correct ToolInvocationPart structure
         const toolPart = part as ToolInvocationPart
         return (
-          <ToolCallDisplay
-            key={`tool-${index}-${toolPart.toolInvocation.toolCallId}`}
-            part={toolPart}
-          />
+          <div key={`tool-invocation-${index}`} className="flex items-center space-x-2">
+            <ToolCallDisplay
+              key={`tool-${index}-${toolPart.toolInvocation.toolCallId}`}
+              part={toolPart}
+            />
+          </div>
         )
       }
       // Ignore other part types like 'step-start' - they don't need visual representation

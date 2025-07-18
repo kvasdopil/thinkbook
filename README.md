@@ -202,3 +202,10 @@
   - **Row Limiting**: Only the first 50 rows are displayed, with a message indicating the total number of rows.
   - **Worker Logic**: The Pyodide worker now has a `display()` function that intercepts DataFrame objects.
   - **Comprehensive Testing**: Added unit tests for the `TableDisplay` component.
+
+- **0021.TOOL_CALL_ICON_RENDERING.md**: Implemented tool call icon rendering to improve readability. The implementation includes:
+  - **ToolCallIcon Component**: A new component to render tool calls as status icons.
+  - **Status Icons**: Icons for success, failure, in-progress, and cancelled states.
+  - **Hover and Click Interactions**: Hovering an icon shows a tooltip, and clicking toggles a collapsible panel with the full JSON payload.
+  - **Accessibility**: Icons and panels are keyboard-accessible.
+  - **Comprehensive Testing**: Added unit tests for the `ToolCallIcon` component and updated existing tests.

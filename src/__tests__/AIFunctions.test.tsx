@@ -89,7 +89,7 @@ describe('AI Functions', () => {
 
     render(<Chat cells={mockCells} onCellUpdate={mockOnCellUpdate} />)
     expect(screen.getByText('I can help you with that.')).toBeInTheDocument()
-    expect(screen.getByText('listCells()')).toBeInTheDocument()
+    expect(screen.getByTitle('listCells (success)')).toBeInTheDocument()
   })
 
   it('displays createCodeCell function call messages', () => {
@@ -139,7 +139,7 @@ describe('AI Functions', () => {
     expect(
       screen.getByText("I'll create a new code cell for you.")
     ).toBeInTheDocument()
-    expect(screen.getByText('createCodeCell()')).toBeInTheDocument()
+    expect(screen.getByTitle('createCodeCell (success)')).toBeInTheDocument()
   })
 
   it('displays describeSnowflakeTable function call messages', () => {
@@ -195,7 +195,9 @@ describe('AI Functions', () => {
     expect(
       screen.getByText("I'll describe the table structure for you.")
     ).toBeInTheDocument()
-    expect(screen.getByText('describeSnowflakeTable()')).toBeInTheDocument()
+    expect(
+      screen.getByTitle('describeSnowflakeTable (success)')
+    ).toBeInTheDocument()
   })
 
   it('passes correct props to Chat component', () => {

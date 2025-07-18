@@ -449,7 +449,7 @@ describe('Chat', () => {
 
       // Check that all content is rendered in order
       expect(screen.getByText('I can help you with that.')).toBeInTheDocument()
-      expect(screen.getByText('listCells()')).toBeInTheDocument()
+      expect(screen.getByTitle('listCells (success)')).toBeInTheDocument()
       expect(screen.getByText('Analysis complete.')).toBeInTheDocument()
     })
   })
