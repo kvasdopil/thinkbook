@@ -44,10 +44,11 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
   const [isStopping, setIsStopping] = useState(false)
   const [sharedArrayBufferSupported, setSharedArrayBufferSupported] =
     useState(false)
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
-  const { apiKey, isLoaded: isGeminiKeyLoaded } = useGeminiApiKey()
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const { apiKey, isLoaded: isGeminiKeyLoaded } = useGeminiApiKey();
   const { snowflakeConfig, isLoaded: isSnowflakeConfigLoaded } =
-    useSnowflakeConfig()
+    useSnowflakeConfig();
 
   useEffect(() => {
     if (
@@ -70,9 +71,16 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
   const runningCellRef = useRef<string | null>(null)
 
   // AI Chat integration
-  const { status, messages, input, setInput, handleSubmit, isLoading } =
-    useChat({
-      initialMessages: initialMessages,
+  const {
+    status,
+    messages,
+    input,
+    setInput,
+    handleSubmit,
+    isLoading,
+    setMessages,
+  } = useChat({
+    initialMessages: initialMessages,
       api: '/api/chat',
       maxSteps: 5,
       headers: {
@@ -475,6 +483,48 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
           isStopping={isStopping}
           sharedArrayBufferSupported={sharedArrayBufferSupported}
           isLoading={isLoading}
+          editingMessageId={editingMessageId}
+          onStartEdit={setEditingMessageId}
+          onCancelEdit={() => setEditingMessageId(null)}
+          onSaveEdit={(messageId, newContent) => {
+            const messageIndex = messages.findIndex((m) => m.id === messageId);
+            if (messageIndex === -1) return;
+
+            // Create a new message object with the updated content
+            const updatedMessage = {
+              ...messages[messageIndex],
+              content: newContent,
+            };
+
+            // Remove all subsequent messages and cells
+            const newMessages = messages.slice(0, messageIndex);
+            const newCells = cells.filter((cell) => {
+              const cellTimestamp =
+                conversationItems.find(
+                  (item) => item.type === 'cell' && item.data.id === cell.id
+                )?.timestamp || 0;
+              const messageTimestamp =
+                conversationItems.find(
+                  (item) =>
+                    item.type === 'message' && item.data.id === messageId
+                )?.timestamp || 0;
+              return cellTimestamp < messageTimestamp;
+            });
+
+            setMessages([...newMessages, updatedMessage]);
+            setCells(newCells);
+
+            // Resubmit the conversation from the edited message
+            handleSubmit(new Event('submit'), {
+              options: {
+                body: {
+                  messages: [...newMessages, updatedMessage],
+                },
+              },
+            });
+
+            setEditingMessageId(null);
+          }}
         />
         {status}
       </div>

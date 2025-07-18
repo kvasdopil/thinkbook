@@ -5,14 +5,21 @@ import { ConversationItem as ConversationItemType } from '@/types/conversation'
 import { CellData, CellOperations } from '@/types/cell'
 import { Message } from 'ai/react'
 import Cell from './Cell'
-import MessageItem from './MessageItem'
+import MessageItem from './MessageItem';
+import { useChat } from 'ai/react';
+import MarkdownComponents from './MarkdownComponents';
+import ToolCallDisplay from './ToolCallDisplay';
 
 interface ConversationItemProps {
-  item: ConversationItemType
-  cellOperations?: CellOperations
-  isWorkerReady?: boolean
-  isStopping?: boolean
-  sharedArrayBufferSupported?: boolean
+  item: ConversationItemType;
+  cellOperations?: CellOperations;
+  isWorkerReady?: boolean;
+  isStopping?: boolean;
+  sharedArrayBufferSupported?: boolean;
+  editingMessageId: string | null;
+  onStartEdit: (messageId: string) => void;
+  onSaveEdit: (messageId: string, newContent: string) => void;
+  onCancelEdit: () => void;
 }
 
 export default function ConversationItem({
@@ -21,10 +28,32 @@ export default function ConversationItem({
   isWorkerReady,
   isStopping,
   sharedArrayBufferSupported,
+  editingMessageId,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
 }: ConversationItemProps) {
   if (item.type === 'message') {
-    const message = item.data as Message
-    return <MessageItem message={message} />
+    const message = item.data as Message;
+    if (message.role === 'user') {
+      return (
+        <MessageItem
+          message={message}
+          isEditing={editingMessageId === message.id}
+          onStartEdit={onStartEdit}
+          onSave={(newContent) => onSaveEdit(message.id, newContent)}
+          onCancel={onCancelEdit}
+        />
+      );
+    }
+    return (
+      <div className="p-2">
+        {message.content}
+        {message.toolInvocations?.map((toolInvocation, index) => (
+          <ToolCallDisplay key={index} toolInvocation={toolInvocation} />
+        ))}
+      </div>
+    );
   } else if (item.type === 'cell') {
     const cell = item.data as CellData
 
