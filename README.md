@@ -202,3 +202,9 @@
   - **Row Limiting**: Only the first 50 rows are displayed, with a message indicating the total number of rows.
   - **Worker Logic**: The Pyodide worker now has a `display()` function that intercepts DataFrame objects.
   - **Comprehensive Testing**: Added unit tests for the `TableDisplay` component.
+
+- **0022.AUTO_SCROLL_ON_NEW_ITEM.md**: Implemented automatic scrolling to the newest message or code cell in the notebook interface. The implementation includes:
+  - **Custom Hook**: A new `useAutoScroll` hook to manage the auto-scrolling logic.
+  - **Smooth Scrolling**: The scrolling is smooth and respects the user's reduced-motion preference.
+  - **Conditional Scrolling**: The auto-scroll only triggers when new items are added, and not on modifications or deletions.
+  - **Comprehensive Testing**: Added unit tests for the `useAutoScroll` hook.

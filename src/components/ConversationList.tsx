@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useRef, useEffect } from 'react'
+import React from 'react'
 import { ConversationItem, sortConversationItems } from '@/types/conversation'
 import { CellOperations } from '@/types/cell'
 import ConversationItemComponent from './ConversationItem'
+import { useAutoScroll } from '@/hooks/useAutoScroll'
 
 interface ConversationListProps {
   items: ConversationItem[]
@@ -22,22 +23,12 @@ export default function ConversationList({
   sharedArrayBufferSupported,
   isLoading = false,
 }: ConversationListProps) {
-  const endRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useAutoScroll({ dependency: [items.length] });
 
-  // Auto-scroll to bottom when new items arrive
-  const scrollToBottom = () => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [items])
-
-  // Sort items chronologically
   const sortedItems = sortConversationItems(items)
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
       {sortedItems.length === 0 ? (
         <div className="flex items-center justify-center h-32">
           <p className="text-gray-500 text-sm">
@@ -65,8 +56,6 @@ export default function ConversationList({
           </div>
         </div>
       )}
-
-      <div ref={endRef} />
     </div>
   )
 }
