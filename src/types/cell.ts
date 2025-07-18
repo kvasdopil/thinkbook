@@ -6,12 +6,15 @@ export type ExecutionStatus =
   | 'failed'
   | 'cancelled'
 
+import type { TablePayload } from './worker'
+
 // Cell data structure for individual cells
 export interface CellData {
   id: string
   type: 'code' | 'markdown'
   text: string
   output: string
+  tables: TablePayload[] // Change to array to support multiple tables
   isCodeVisible: boolean
   executionStatus: ExecutionStatus
   parentId: string | null // ID of the parent message or tool call that created this cell (null if first item)
@@ -45,6 +48,7 @@ export function createNewCell(
     type: 'code',
     text: '# Write your Python code here\nprint("Hello, World!")',
     output: '',
+    tables: [],
     isCodeVisible: false,
     executionStatus: 'idle',
     parentId,

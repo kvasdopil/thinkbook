@@ -195,3 +195,10 @@
   - **Persistence**: Title changes are persisted on blur, updating the file's `title` and `updatedAt` properties.
   - **Settings Icon**: A settings icon is included in the header to open the settings modal.
   - **Comprehensive Testing**: Added unit tests for the `NotebookHeader` component.
+
+- **0020.TABLE_DISPLAY.md**: Implemented an interactive, scrollable HTML table for displaying pandas DataFrame results. The implementation includes:
+  - **DataFrame to JSON**: The worker converts DataFrames to JSON and sends them to the frontend.
+  - **TableDisplay Component**: A new component to render the table, with horizontal scrolling for wide tables.
+  - **Row Limiting**: Only the first 50 rows are displayed, with a message indicating the total number of rows.
+  - **Worker Logic**: The Pyodide worker now has a `display()` function that intercepts DataFrame objects.
+  - **Comprehensive Testing**: Added unit tests for the `TableDisplay` component.

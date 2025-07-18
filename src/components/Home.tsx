@@ -225,7 +225,7 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
     workerRef.current = worker
 
     worker.onmessage = (event: MessageEvent<PyodideResponse>) => {
-      const { type, error, output: streamOutput } = event.data
+      const { id, type, error, output: streamOutput, table } = event.data
 
       switch (type) {
         case 'init-complete':
@@ -239,11 +239,10 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
           break
 
         case 'output':
-          if (streamOutput && runningCellRef.current) {
-            const runningCellId = runningCellRef.current
+          if (id && streamOutput) {
             setCells((prev) =>
               prev.map((cell) =>
-                cell.id === runningCellId
+                cell.id === id
                   ? {
                       ...cell,
                       output:
@@ -257,12 +256,23 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
           }
           break
 
-        case 'result':
-          if (runningCellRef.current) {
-            const runningCellId = runningCellRef.current
+        case 'table':
+          if (id && table) {
             setCells((prev) =>
               prev.map((cell) =>
-                cell.id === runningCellId
+                cell.id === id
+                  ? { ...cell, tables: [...cell.tables, table] }
+                  : cell
+              )
+            )
+          }
+          break
+
+        case 'result':
+          if (id) {
+            setCells((prev) =>
+              prev.map((cell) =>
+                cell.id === id
                   ? { ...cell, executionStatus: 'complete' }
                   : cell
               )
@@ -273,15 +283,14 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
           break
 
         case 'error':
-          if (runningCellRef.current) {
-            const runningCellId = runningCellRef.current
+          if (id) {
             setCells((prev) =>
               prev.map((cell) =>
-                cell.id === runningCellId
+                cell.id === id
                   ? {
                       ...cell,
                       executionStatus: 'failed',
-                      output: cell.output + `\\n[ERROR] ${error}`,
+                      output: cell.output + `\n[ERROR] ${error}`,
                     }
                   : cell
               )
@@ -292,15 +301,14 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
           break
 
         case 'execution-cancelled':
-          if (runningCellRef.current) {
-            const runningCellId = runningCellRef.current
+          if (id) {
             setCells((prev) =>
               prev.map((cell) =>
-                cell.id === runningCellId
+                cell.id === id
                   ? {
                       ...cell,
                       executionStatus: 'cancelled',
-                      output: cell.output + '\\n[CANCELLED] Execution stopped',
+                      output: cell.output + '\n[CANCELLED] Execution stopped',
                     }
                   : cell
               )
@@ -345,7 +353,7 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
       )
     },
 
-    runCell: (id: string) => {
+    runCell: (id:string) => {
       if (!isWorkerReady || runningCellRef.current) return
 
       const cell = cells.find((c) => c.id === id)
@@ -354,11 +362,13 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
       runningCellRef.current = id
       setCells((prev) =>
         prev.map((c) =>
-          c.id === id ? { ...c, executionStatus: 'running', output: '' } : c
+          c.id === id
+            ? { ...c, executionStatus: 'running', output: '', tables: [] }
+            : c
         )
       )
 
-      workerRef.current?.postMessage({ type: 'execute', code: cell.text })
+      workerRef.current?.postMessage({ type: 'execute', id, code: cell.text })
     },
 
     stopCell: (id: string) => {
