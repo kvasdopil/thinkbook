@@ -27,45 +27,54 @@ export default function MessageItem({ message }: MessageItemProps) {
 
   // Always use message.parts array to maintain chronological order
   if (message.parts && message.parts.length > 0) {
-    renderItems = message.parts.map((part, index) => {
-      if (part.type === 'text' && part.text) {
-        return (
-          <div
-            key={`text-${index}`}
-            className={`flex ${
-              message.role === 'user' ? 'justify-end' : 'justify-start'
-            }`}
-          >
+    const toolInvocations = message.parts.filter(
+      (part) => part.type === 'tool-invocation'
+    ) as ToolInvocationPart[];
+
+    renderItems = message.parts
+      .filter((part) => part.type !== 'tool-invocation')
+      .map((part, index) => {
+        if (part.type === 'text' && part.text) {
+          return (
             <div
-              className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                message.role === 'user'
-                  ? 'bg-blue-500 text-white'
-                  // AI responses should have a transparent background and no border
-                  : 'bg-transparent text-gray-800'
+              key={`text-${index}`}
+              className={`flex ${
+                message.role === 'user' ? 'justify-end' : 'justify-start'
               }`}
             >
-              <div className="text-sm">
-                <ReactMarkdown components={MarkdownComponents}>
-                  {part.text}
-                </ReactMarkdown>
+              <div
+                className={`max-w-[80%] rounded-lg px-3 py-2 ${
+                  message.role === 'user'
+                    ? 'bg-blue-500 text-white'
+                    // AI responses should have a transparent background and no border
+                    : 'bg-transparent text-gray-800'
+                }`}
+              >
+                <div className="text-sm">
+                  <ReactMarkdown components={MarkdownComponents}>
+                    {part.text}
+                  </ReactMarkdown>
+                </div>
               </div>
             </div>
-          </div>
-        )
-      }
+          );
+        }
+        // Ignore other part types like 'step-start' - they don't need visual representation
+        return null;
+      });
 
-      if (part.type === 'tool-invocation') {
-        // Use the part directly as it already has the correct ToolInvocationPart structure
-        const toolPart = part as ToolInvocationPart
-        return (
-          <ToolCallDisplay
-            key={`tool-${index}-${toolPart.toolInvocation.toolCallId}`}
-            part={toolPart}
-          />
-        )
-      }
-      // Ignore other part types like 'step-start' - they don't need visual representation
-    })
+    if (toolInvocations.length > 0) {
+      renderItems.push(
+        <div key="tool-invocations" className="flex items-center space-x-2">
+          {toolInvocations.map((toolPart, index) => (
+            <ToolCallDisplay
+              key={`tool-${index}-${toolPart.toolInvocation.toolCallId}`}
+              part={toolPart}
+            />
+          ))}
+        </div>
+      );
+    }
   }
 
   return <div className="space-y-2">{renderItems}</div>
