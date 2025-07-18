@@ -23,6 +23,14 @@ export default function ConversationList({
   isLoading = false,
 }: ConversationListProps) {
   const endRef = useRef<HTMLDivElement>(null)
+  // Reference to the scroll container so we can inspect its current scroll
+  // position before deciding whether to auto-scroll.  This prevents unwanted
+  // jumps (e.g. when executing a cell) if the user has scrolled away from the
+  // bottom.
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Track previous length of items so we can detect *additions* only.
+  const prevItemCountRef = useRef<number>(items.length)
 
   // Auto-scroll to bottom when new items arrive
   const scrollToBottom = () => {
@@ -30,14 +38,37 @@ export default function ConversationList({
   }
 
   useEffect(() => {
-    scrollToBottom()
+    const container = containerRef.current
+
+    // Scroll only when brand-new items were appended (length increased).
+    const hasNewItem = items.length > prevItemCountRef.current
+
+    // Update the ref for next run *before* any early returns.
+    prevItemCountRef.current = items.length
+
+    if (!hasNewItem) return
+
+    if (!container) {
+      scrollToBottom()
+      return
+    }
+
+    const { scrollTop, scrollHeight, clientHeight } = container
+
+    // Respect user's manual scroll-up: only auto-scroll when they are already
+    // close to the bottom (within 100 px).
+    const isNearBottom = scrollHeight - scrollTop - clientHeight <= 100
+
+    if (isNearBottom) {
+      scrollToBottom()
+    }
   }, [items])
 
   // Sort items chronologically
   const sortedItems = sortConversationItems(items)
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
       {sortedItems.length === 0 ? (
         <div className="flex items-center justify-center h-32">
           <p className="text-gray-500 text-sm">

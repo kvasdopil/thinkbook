@@ -31,6 +31,17 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
   const initialMessages = activeFile?.messages || []
   // Cells state - only store cells, not messages
   const [cells, setCells] = useState<CellData[]>(initialCells)
+  // Keep a mutable ref in sync with the latest cells so that we can read/write
+  // synchronously inside tool-call handlers without waiting for React state
+  // updates and re-renders.
+  const cellsRef = useRef<CellData[]>(initialCells)
+
+  // Whenever the React state updates, also update the ref so that external
+  // consumers (e.g., AI function calls) always have immediate access to the
+  // freshest data even before the next render cycle.
+  useEffect(() => {
+    cellsRef.current = cells
+  }, [cells])
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -87,8 +98,9 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
           let result: unknown
 
           if (toolCall.toolName === 'listCells') {
-            // Get current cells
-            result = cells.map((cell) => ({
+            // Get the most up-to-date cells snapshot (may include edits from a
+            // previous tool call in the same step).
+            result = cellsRef.current.map((cell) => ({
               id: cell.id,
               type: 'code',
               text: cell.text,
@@ -98,11 +110,15 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
             const params = toolCall.args as UpdateCellParams
             result = await executeUpdateCell(params, {
               onCellCodeChange: (text: string) => {
-                setCells((prev) =>
-                  prev.map((cell) =>
+                // Update cells synchronously so that a subsequent listCells
+                // call in the same step sees the new content immediately.
+                setCells((prev) => {
+                  const newCells = prev.map((cell) =>
                     cell.id === params.id ? { ...cell, text } : cell
                   )
-                )
+                  cellsRef.current = newCells
+                  return newCells
+                })
               },
               currentCellId: params.id,
             })
@@ -114,7 +130,11 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
                 // Use the toolCallId as the parentId to link the cell to this tool call
                 const newCell = createNewCell(newId, toolCall.toolCallId)
                 newCell.text = text
-                setCells((prev) => [...prev, newCell])
+                setCells((prev) => {
+                  const newCells = [...prev, newCell]
+                  cellsRef.current = newCells
+                  return newCells
+                })
               },
               currentMessageId: toolCall.toolCallId,
             })

@@ -1,7 +1,6 @@
 'use client'
 
 import { Editor } from '@monaco-editor/react'
-import { useRef, useEffect } from 'react'
 import {
   FaRegEye,
   FaRegEyeSlash,
@@ -31,26 +30,6 @@ export default function Cell({
   isStopping,
   sharedArrayBufferSupported,
 }: CellProps) {
-  const outputRef = useRef<HTMLPreElement>(null)
-
-  // Auto-scroll helper function
-  const scrollToBottomIfNeeded = () => {
-    if (outputRef.current) {
-      const element = outputRef.current
-      const isAtBottom =
-        element.scrollHeight - element.scrollTop <= element.clientHeight + 1
-
-      if (isAtBottom) {
-        element.scrollTop = element.scrollHeight
-      }
-    }
-  }
-
-  // Scroll to bottom when output changes
-  useEffect(() => {
-    scrollToBottomIfNeeded()
-  }, [cell.output, cell.tables])
-
   const handleCodeChange = (value: string | undefined) => {
     const newCode = value || ''
     operations.updateCell(cell.id, { text: newCode })
@@ -221,10 +200,7 @@ export default function Cell({
             </span>
           )}
         </div>
-        <div
-          ref={outputRef}
-          className="p-4 bg-gray-50 min-h-32 max-h-96 overflow-y-auto"
-        >
+        <div className="p-4 bg-gray-50 min-h-32 max-h-96 overflow-y-auto">
           {cell.output && (
             <pre className="text-sm font-mono whitespace-pre-wrap text-gray-800">
               {cell.output}
