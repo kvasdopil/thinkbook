@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 // Import Pyodide from CDN
-importScripts('https://cdn.jsdelivr.net/npm/pyodide@0.28.0/pyodide.js')
+importScripts('https://cdn.jsdelivr.net/pyodide/v0.28.0/full/pyodide.js')
 
 import type { PyodideMessage, PyodideResponse } from '../types/worker'
 
@@ -13,11 +13,9 @@ async function initializePyodide() {
   try {
     // @ts-expect-error - loadPyodide is loaded from external script
     pyodide = await loadPyodide({
-      indexURL: 'https://cdn.jsdelivr.net/npm/pyodide@0.28.0/',
+      indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.28.0/full/',
+      packages: ['pandas'],
     })
-
-    // Load pandas
-    await pyodide.loadPackage('pandas')
 
     // Set up pending interrupt buffer if one was provided before initialization
     if (pendingInterruptBuffer) {
