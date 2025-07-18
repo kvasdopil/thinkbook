@@ -20,8 +20,6 @@ export interface PyodideResponse {
     | 'error'
     | 'output'
     | 'table' // New type for table data
-    | 'execution-complete'
-    | 'execution-error'
     | 'execution-cancelled'
     | 'interrupt-buffer-set'
     | 'shared-array-buffer-unavailable'

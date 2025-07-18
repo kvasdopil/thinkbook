@@ -116,20 +116,23 @@ async function executeCode(id: string, code: string) {
     })
 
     // New callback for displaying tables
-    pyodide.globals.set('_display_table', (df_json: string) => {
-      const { columns, data, index } = JSON.parse(df_json)
-      const response: PyodideResponse = {
-        id,
-        type: 'table',
-        table: {
-          columns,
-          data,
-          totalRows: index.length, // Use full index length for total count
-        },
+    pyodide.globals.set(
+      '_display_table',
+      (df_json: string, total_rows: number) => {
+        const { columns, data } = JSON.parse(df_json)
+        const response: PyodideResponse = {
+          id,
+          type: 'table',
+          table: {
+            columns,
+            data,
+            totalRows: total_rows,
+          },
+        }
+        console.log('[Worker] Sending table response:', response)
+        self.postMessage(response)
       }
-      console.log('[Worker] Sending table response:', response)
-      self.postMessage(response)
-    })
+    )
 
     // Override print, stderr, and add display to call our streaming functions
     pyodide.runPython(`
@@ -166,17 +169,11 @@ def display(obj):
         # Get up to 50 rows for preview
         df_preview = obj.head(50)
 
-        # Convert preview to JSON split format
-        df_json = df_preview.to_json(orient="split", index=False) # No index in data
+        # Convert preview to JSON split format (without index)
+        df_json = df_preview.to_json(orient="split", index=False)
 
-        # Parse and reconstruct for full JSON payload
-        parsed_json = json.loads(df_json)
-        full_payload = {
-            "columns": parsed_json['columns'],
-            "data": parsed_json['data'],
-            "index": list(range(total_rows)) # Use full length for totalRows
-        }
-        _display_table(json.dumps(full_payload))
+        # Send JSON and total_rows separately
+        _display_table(df_json, total_rows)
     else:
         # Fallback to standard print for non-DataFrames
         _original_print(obj)

@@ -48,7 +48,7 @@ export default function Cell({
   // Scroll to bottom when output changes
   useEffect(() => {
     scrollToBottomIfNeeded()
-  }, [cell.output, cell.table])
+  }, [cell.output, cell.tables])
 
   const handleCodeChange = (value: string | undefined) => {
     const newCode = value || ''
@@ -229,7 +229,9 @@ export default function Cell({
               {cell.output}
             </pre>
           )}
-          {cell.table && <TableDisplay table={cell.table} />}
+          {cell.tables.map((table, index) => (
+            <TableDisplay key={index} table={table} />
+          ))}
         </div>
       </div>
     </div>

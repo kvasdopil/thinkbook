@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import Home from '../components/Home'
 import { useGeminiApiKey } from '../hooks/useGeminiApiKey'
 import { useSnowflakeConfig } from '../hooks/useSnowflakeConfig'
@@ -28,7 +28,9 @@ describe('Settings', () => {
 
   it('opens modal automatically if Gemini key is missing', async () => {
     mockUseGeminiApiKey.mockReturnValue({ apiKey: null, isLoaded: true })
-    render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
+    await act(async () => {
+      render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
+    })
     await waitFor(() => {
       expect(screen.getByText('Settings')).toBeInTheDocument()
     })
@@ -39,7 +41,9 @@ describe('Settings', () => {
       snowflakeConfig: { accessToken: null, hostname: 'test-host' },
       isLoaded: true,
     })
-    render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
+    await act(async () => {
+      render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
+    })
     await waitFor(() => {
       expect(screen.getByText('Settings')).toBeInTheDocument()
     })
@@ -50,15 +54,21 @@ describe('Settings', () => {
       snowflakeConfig: { accessToken: 'test-token', hostname: null },
       isLoaded: true,
     })
-    render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
+    await act(async () => {
+      render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
+    })
     await waitFor(() => {
       expect(screen.getByText('Settings')).toBeInTheDocument()
     })
   })
 
   it('opens the settings modal when the settings button is clicked', async () => {
-    render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
-    fireEvent.click(screen.getByLabelText('Settings'))
+    await act(async () => {
+      render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Settings'))
+    })
     await waitFor(() => {
       expect(screen.getByText('Settings')).toBeInTheDocument()
     })

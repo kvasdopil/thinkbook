@@ -260,7 +260,9 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
           if (id && table) {
             setCells((prev) =>
               prev.map((cell) =>
-                cell.id === id ? { ...cell, table } : cell
+                cell.id === id
+                  ? { ...cell, tables: [...cell.tables, table] }
+                  : cell
               )
             )
           }
@@ -361,7 +363,7 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
       setCells((prev) =>
         prev.map((c) =>
           c.id === id
-            ? { ...c, executionStatus: 'running', output: '', table: null }
+            ? { ...c, executionStatus: 'running', output: '', tables: [] }
             : c
         )
       )
