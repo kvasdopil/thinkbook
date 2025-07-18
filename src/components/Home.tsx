@@ -101,6 +101,14 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
       onFinish: () => {
         /* No-op: persistence handled in useEffect below */
       },
+    onResponse: (response) => {
+      if (editingMessageId) {
+        // This is a hack to prevent the AI from responding while editing
+        // A better solution would be to cancel the request
+        // but the Vercel AI SDK doesn't support that yet
+        return;
+      }
+    },
       async onToolCall({ toolCall }) {
         try {
           let result: unknown
@@ -518,27 +526,30 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
 
             // Remove all subsequent messages and cells
             const newMessages = messages.slice(0, messageIndex);
-            const newCells = cells.filter((cell) => {
-              const cellTimestamp =
-                conversationItems.find(
-                  (item) => item.type === 'cell' && item.data.id === cell.id
-                )?.timestamp || 0;
-              const messageTimestamp =
-                conversationItems.find(
-                  (item) =>
-                    item.type === 'message' && item.data.id === messageId
-                )?.timestamp || 0;
-              return cellTimestamp < messageTimestamp;
-            });
+            const conversationItemsUpToMessage = conversationItems.slice(
+              0,
+              conversationItems.findIndex(
+                (item) =>
+                  item.type === 'message' && item.data.id === messageId
+              ) + 1
+            );
+            const newCells = cells.filter((cell) =>
+              conversationItemsUpToMessage.some(
+                (item) => item.type === 'cell' && item.data.id === cell.id
+              )
+            );
 
-            setMessages([...newMessages, updatedMessage]);
+            const newMessagesWithUpdate = [...newMessages, updatedMessage];
+            setMessages(newMessagesWithUpdate);
             setCells(newCells);
+
+            onUpdate({ messages: newMessagesWithUpdate, cells: newCells });
 
             // Resubmit the conversation from the edited message
             handleSubmit(new Event('submit'), {
               options: {
                 body: {
-                  messages: [...newMessages, updatedMessage],
+                  messages: newMessagesWithUpdate,
                 },
               },
             });

@@ -35,24 +35,14 @@ export default function ConversationItem({
 }: ConversationItemProps) {
   if (item.type === 'message') {
     const message = item.data as Message;
-    if (message.role === 'user') {
-      return (
-        <MessageItem
-          message={message}
-          isEditing={editingMessageId === message.id}
-          onStartEdit={onStartEdit}
-          onSave={(newContent) => onSaveEdit(message.id, newContent)}
-          onCancel={onCancelEdit}
-        />
-      );
-    }
     return (
-      <div className="p-2">
-        {message.content}
-        {message.toolInvocations?.map((toolInvocation, index) => (
-          <ToolCallDisplay key={index} toolInvocation={toolInvocation} />
-        ))}
-      </div>
+      <MessageItem
+        message={message}
+        isEditing={editingMessageId === message.id}
+        onStartEdit={onStartEdit}
+        onSave={(newContent) => onSaveEdit(message.id, newContent)}
+        onCancel={onCancelEdit}
+      />
     );
   } else if (item.type === 'cell') {
     const cell = item.data as CellData
