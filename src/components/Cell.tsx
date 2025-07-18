@@ -10,6 +10,7 @@ import {
   FaTimesCircle,
   FaExclamationCircle,
   FaTrash,
+  FaPlayCircle,
 } from 'react-icons/fa'
 import type { CellData, CellOperations } from '../types/cell'
 import { getTopLevelComment } from '../types/cell'
@@ -118,7 +119,7 @@ export default function Cell({
         }
       default: // idle
         return {
-          icon: FaCircle,
+          icon: FaPlayCircle,
           color: 'text-gray-400',
           bgColor: 'bg-gray-50 hover:bg-gray-100',
           title: 'Run',

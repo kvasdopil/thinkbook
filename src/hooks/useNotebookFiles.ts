@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { NotebookFile } from '../components/FilePanel'
+import type { CellData } from '../types/cell'
 import {
   saveNotebookFiles,
   loadNotebookFiles,
@@ -35,7 +36,27 @@ export const useNotebookFiles = () => {
   }, [])
 
   const saveFiles = useCallback(async (updatedFiles: NotebookFile[]) => {
-    const filesMap = updatedFiles.reduce(
+    // Strip runtime state from cells before saving to storage
+    const sanitizeCells = (cells: CellData[]) =>
+      cells.map((cell) => ({
+        id: cell.id,
+        type: cell.type,
+        text: cell.text,
+        parentId: cell.parentId ?? null,
+        // UI-related state like code visibility can be safely persisted
+        isCodeVisible: cell.isCodeVisible ?? false,
+        // Ensure runtime state is reset on persist
+        executionStatus: 'idle' as const,
+        output: '',
+        tables: [],
+      }))
+
+    const sanitizedFiles = updatedFiles.map((file) => ({
+      ...file,
+      cells: sanitizeCells(file.cells),
+    }))
+
+    const filesMap = sanitizedFiles.reduce(
       (acc, file) => {
         acc[file.id] = file
         return acc
@@ -43,7 +64,7 @@ export const useNotebookFiles = () => {
       {} as Record<string, NotebookFile>
     )
     await saveNotebookFiles(filesMap)
-    setFiles(updatedFiles)
+    setFiles(sanitizedFiles)
   }, [])
 
   const createNewFile = useCallback(() => {
@@ -145,7 +166,7 @@ export const useNotebookFiles = () => {
           selectFile(sortedFiles[0].id)
         } else {
           setActiveFileId(null)
-          saveLastActiveFileId(null)
+          saveLastActiveFileId('')
         }
       }
     },
