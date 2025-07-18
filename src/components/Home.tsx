@@ -18,7 +18,6 @@ import { executeSql } from '@/ai-functions/execute-sql'
 import { describeSnowflakeTable } from '@/ai-functions/describe-snowflake-table'
 import type { UpdateCellParams, CreateCodeCellParams } from '@/ai-functions'
 import { NotebookFile } from './FilePanel'
-import { useNotebookFiles } from '@/hooks/useNotebookFiles'
 
 interface HomeProps {
   activeFile: NotebookFile | null
@@ -272,9 +271,7 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
           if (id) {
             setCells((prev) =>
               prev.map((cell) =>
-                cell.id === id
-                  ? { ...cell, executionStatus: 'complete' }
-                  : cell
+                cell.id === id ? { ...cell, executionStatus: 'complete' } : cell
               )
             )
             runningCellRef.current = null
@@ -353,7 +350,7 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
       )
     },
 
-    runCell: (id:string) => {
+    runCell: (id: string) => {
       if (!isWorkerReady || runningCellRef.current) return
 
       const cell = cells.find((c) => c.id === id)
@@ -458,19 +455,19 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
 
   return (
     <main className="flex flex-col h-screen bg-white">
-      <NotebookHeader
-        title={initialTitle}
-        onTitleChange={(newTitle) => onUpdate({ title: newTitle })}
-        onSettingsClick={() => setIsSettingsModalOpen(true)}
-        onDeleteClick={() => {
-          if (activeFile) {
-            onDelete(activeFile.id)
-          }
-        }}
-      />
-
-      {/* Unified Conversation View */}
+      {/* Scrollable content: header + conversation */}
       <div className="flex-1 overflow-y-auto">
+        <NotebookHeader
+          title={initialTitle}
+          onTitleChange={(newTitle) => onUpdate({ title: newTitle })}
+          onSettingsClick={() => setIsSettingsModalOpen(true)}
+          onDeleteClick={() => {
+            if (activeFile) {
+              onDelete(activeFile.id)
+            }
+          }}
+        />
+
         <ConversationList
           items={conversationItems}
           cellOperations={cellOperations}
