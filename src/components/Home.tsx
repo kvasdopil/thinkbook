@@ -156,13 +156,6 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
       }
     },
   });
-    },
-  });
-      } catch (error) {
-        throw error
-      }
-    },
-  })
 
   // Derived conversation items - combine live messages with cells
   const conversationItems: ConversationItem[] = useMemo(() => {
