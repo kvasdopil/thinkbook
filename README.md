@@ -210,3 +210,10 @@
   - **Accessibility**: Icons and panels are keyboard-accessible with improved color contrast.
   - **Comprehensive Testing**: Added unit tests for the `ToolCallIcon` component and updated existing tests to cover all acceptance criteria.
   - **UI Polish**: The collapsible panel now separates "Request parameters" and "Result / Error" for clarity.
+
+- **0023.ROLLBACK_EDIT_PREVIOUS_MESSAGE.md**: Implemented the ability to edit and resend previous messages. The implementation includes:
+  - **Click to Edit**: User messages are now clickable, opening an edit view.
+  - **Edit UI**: An editable textarea with "Send" and "Cancel" buttons replaces the message.
+  - **Opacity Change**: Subsequent messages are dimmed during editing.
+  - **Rollback Logic**: Sending an edited message removes all subsequent conversation items and resubmits the conversation from that point.
+  - **Comprehensive Testing**: Added unit tests for the new `MessageItem` component.

@@ -6,12 +6,16 @@ import { CellOperations } from '@/types/cell'
 import ConversationItemComponent from './ConversationItem'
 
 interface ConversationListProps {
-  items: ConversationItem[]
-  cellOperations: CellOperations
-  isWorkerReady: boolean
-  isStopping: boolean
-  sharedArrayBufferSupported: boolean
-  isLoading?: boolean
+  items: ConversationItem[];
+  cellOperations: CellOperations;
+  isWorkerReady: boolean;
+  isStopping: boolean;
+  sharedArrayBufferSupported: boolean;
+  isLoading?: boolean;
+  editingMessageId: string | null;
+  onStartEdit: (messageId: string) => void;
+  onSaveEdit: (messageId: string, newContent: string) => void;
+  onCancelEdit: () => void;
 }
 
 export default function ConversationList({
@@ -21,6 +25,10 @@ export default function ConversationList({
   isStopping,
   sharedArrayBufferSupported,
   isLoading = false,
+  editingMessageId,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
 }: ConversationListProps) {
   const endRef = useRef<HTMLDivElement>(null)
   // Reference to the scroll container so we can inspect its current scroll
@@ -65,7 +73,13 @@ export default function ConversationList({
   }, [items])
 
   // Sort items chronologically
-  const sortedItems = sortConversationItems(items)
+  const sortedItems = sortConversationItems(items);
+
+  const editingMessageIndex = editingMessageId
+    ? sortedItems.findIndex(
+        (item) => item.type === 'message' && item.data.id === editingMessageId
+      )
+    : -1;
 
   return (
     <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -77,15 +91,29 @@ export default function ConversationList({
           </p>
         </div>
       ) : (
-        sortedItems.map((item) => (
-          <ConversationItemComponent
-            key={`${item.type}-${item.type === 'message' ? item.data.id : item.data.id}-${item.timestamp}`}
-            item={item}
-            cellOperations={cellOperations}
-            isWorkerReady={isWorkerReady}
-            isStopping={isStopping}
-            sharedArrayBufferSupported={sharedArrayBufferSupported}
-          />
+        sortedItems.map((item, index) => (
+          <div
+            key={`${item.type}-${
+              item.type === 'message' ? item.data.id : item.data.id
+            }-${item.timestamp}`}
+            className={
+              editingMessageIndex !== -1 && index > editingMessageIndex
+                ? 'opacity-70'
+                : ''
+            }
+          >
+            <ConversationItemComponent
+              item={item}
+              cellOperations={cellOperations}
+              isWorkerReady={isWorkerReady}
+              isStopping={isStopping}
+              sharedArrayBufferSupported={sharedArrayBufferSupported}
+              editingMessageId={editingMessageId}
+              onStartEdit={onStartEdit}
+              onSaveEdit={onSaveEdit}
+              onCancelEdit={onCancelEdit}
+            />
+          </div>
         ))
       )}
 
