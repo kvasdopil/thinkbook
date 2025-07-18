@@ -15,8 +15,12 @@ const config = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  transform: {
+    '^.+\\.(ts|tsx)$': 'ts-jest',
+    '^.+\\.(js|jsx|mjs)$': 'babel-jest',
+  },
   transformIgnorePatterns: [
-    'node_modules/(?!(react-markdown|remark-gfm))/',
+    'node_modules/(?!(react-markdown|remark-gfm|vfile|unist-util-is|unist-util-visit|unist-util-visit-parents|github-slugger))'
   ],
 }
 

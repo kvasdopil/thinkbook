@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaPaperPlane, FaTimes } from 'react-icons/fa';
 import { Message } from 'ai/react';
+import ReactMarkdown from 'react-markdown';
+import MarkdownComponents from './MarkdownComponents';
+import ToolCallDisplay from './ToolCallDisplay';
 
 interface MessageItemProps {
   message: Message;
@@ -40,35 +43,57 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
   };
 
-  if (isEditing) {
-    return (
-      <div className="flex flex-col">
-        <textarea
-          ref={textareaRef}
-          value={editedContent}
-          onChange={(e) => setEditedContent(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={onCancel}
-          className="p-2 border rounded w-full"
-        />
-        <div className="flex justify-end mt-2">
-          <button onClick={handleSave} className="mr-2 p-2" aria-label="Send">
-            <FaPaperPlane />
-          </button>
-          <button onClick={onCancel} className="p-2" aria-label="Cancel">
-            <FaTimes />
-          </button>
+  if (message.role === 'user') {
+    if (isEditing) {
+      return (
+        <div className="flex flex-col">
+          <textarea
+            ref={textareaRef}
+            value={editedContent}
+            onChange={(e) => setEditedContent(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={onCancel}
+            className="p-2 border rounded w-full"
+          />
+          <div className="flex justify-end mt-2" onMouseDown={(e) => e.preventDefault()}>
+            <button
+              onClick={handleSave}
+              className="mr-2 p-2 hover:bg-gray-200 cursor-pointer"
+              aria-label="Send"
+            >
+              <FaPaperPlane />
+            </button>
+            <button
+              onClick={onCancel}
+              className="p-2 hover:bg-gray-200 cursor-pointer"
+              aria-label="Cancel"
+            >
+              <FaTimes />
+            </button>
+          </div>
         </div>
+      );
+    }
+
+    return (
+      <div
+        onClick={() => onStartEdit(message.id)}
+        className="p-2 cursor-pointer hover:bg-gray-100"
+      >
+        {message.content}
       </div>
     );
   }
 
+  // Assistant message
   return (
-    <div
-      onClick={() => onStartEdit(message.id)}
-      className="p-2 cursor-pointer hover:bg-gray-100"
-    >
-      {message.content}
+    <div className="bg-gray-100 p-2 rounded">
+      <ReactMarkdown components={MarkdownComponents}>
+        {message.content}
+      </ReactMarkdown>
+      {message.toolInvocations?.map((toolInvocation, index) => (
+        <ToolCallDisplay key={index} toolInvocation={toolInvocation} />
+      ))}
     </div>
   );
 };
