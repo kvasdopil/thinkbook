@@ -4,6 +4,10 @@
 - after completion of every user-story, update this file, include implemented story in 'implemented stories' section, explain what was done
 - use react-icons for all icons
 
+# Guidelines
+
+- make sure all buttons have enough spacing, have some hover effect, and use pointer cursor to indicate they are clickable
+
 # Docs
 
 - User stories are located in /docs/user-stories
