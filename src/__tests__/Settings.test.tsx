@@ -1,3 +1,4 @@
+/* eslint-disable react/display-name */
 import React from 'react'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import Home from '../components/Home'
@@ -17,6 +18,15 @@ jest.mock('../components/FixedChatInput', () => () => (
 const mockUseGeminiApiKey = useGeminiApiKey as jest.Mock
 const mockUseSnowflakeConfig = useSnowflakeConfig as jest.Mock
 
+const mockActiveFile = {
+  id: '1',
+  title: 'Test Title',
+  cells: [],
+  messages: [],
+  createdAt: '2023-01-01T00:00:00.000Z',
+  updatedAt: '2023-01-01T00:00:00.000Z',
+}
+
 describe('Settings', () => {
   beforeEach(() => {
     mockUseGeminiApiKey.mockReturnValue({ apiKey: 'test-key', isLoaded: true })
@@ -29,7 +39,13 @@ describe('Settings', () => {
   it('opens modal automatically if Gemini key is missing', async () => {
     mockUseGeminiApiKey.mockReturnValue({ apiKey: null, isLoaded: true })
     await act(async () => {
-      render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
+      render(
+        <Home
+          activeFile={mockActiveFile}
+          onUpdate={() => {}}
+          onDelete={jest.fn()}
+        />
+      )
     })
     await waitFor(() => {
       expect(screen.getByText('Settings')).toBeInTheDocument()
@@ -42,7 +58,13 @@ describe('Settings', () => {
       isLoaded: true,
     })
     await act(async () => {
-      render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
+      render(
+        <Home
+          activeFile={mockActiveFile}
+          onUpdate={() => {}}
+          onDelete={jest.fn()}
+        />
+      )
     })
     await waitFor(() => {
       expect(screen.getByText('Settings')).toBeInTheDocument()
@@ -55,7 +77,13 @@ describe('Settings', () => {
       isLoaded: true,
     })
     await act(async () => {
-      render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
+      render(
+        <Home
+          activeFile={mockActiveFile}
+          onUpdate={() => {}}
+          onDelete={jest.fn()}
+        />
+      )
     })
     await waitFor(() => {
       expect(screen.getByText('Settings')).toBeInTheDocument()
@@ -64,7 +92,13 @@ describe('Settings', () => {
 
   it('opens the settings modal when the settings button is clicked', async () => {
     await act(async () => {
-      render(<Home initialCells={[]} initialMessages={[]} onUpdate={() => {}} />)
+      render(
+        <Home
+          activeFile={mockActiveFile}
+          onUpdate={() => {}}
+          onDelete={jest.fn()}
+        />
+      )
     })
     await act(async () => {
       fireEvent.click(screen.getByLabelText('Settings'))

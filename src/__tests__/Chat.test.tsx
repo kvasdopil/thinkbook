@@ -130,6 +130,7 @@ describe('Chat', () => {
       isCodeVisible: false,
       executionStatus: 'idle',
       parentId: null,
+      tables: [],
     },
   ]
 

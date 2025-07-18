@@ -27,6 +27,7 @@ describe('AI Functions', () => {
       isCodeVisible: false,
       executionStatus: 'idle',
       parentId: null,
+      tables: [],
     },
   ]
 

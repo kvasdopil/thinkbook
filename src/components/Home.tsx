@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useChat } from 'ai/react'
+import type { Message } from 'ai/react'
 import type { CellData, CellOperations } from '@/types/cell'
 import { createNewCell } from '@/types/cell'
 import { ConversationItem } from '@/types/conversation'
@@ -27,8 +28,8 @@ interface HomeProps {
 
 export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
   const initialTitle = activeFile?.title || 'Untitled'
-  const initialCells = activeFile?.cells || []
-  const initialMessages = activeFile?.messages || []
+  const initialCells: CellData[] = activeFile?.cells || []
+  const initialMessages: Message[] = activeFile?.messages || []
   // Cells state - only store cells, not messages
   const [cells, setCells] = useState<CellData[]>(initialCells)
   // Keep a mutable ref in sync with the latest cells so that we can read/write
@@ -55,11 +56,11 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
   const [isStopping, setIsStopping] = useState(false)
   const [sharedArrayBufferSupported, setSharedArrayBufferSupported] =
     useState(false)
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const { apiKey, isLoaded: isGeminiKeyLoaded } = useGeminiApiKey();
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+  const { apiKey, isLoaded: isGeminiKeyLoaded } = useGeminiApiKey()
   const { snowflakeConfig, isLoaded: isSnowflakeConfigLoaded } =
-    useSnowflakeConfig();
+    useSnowflakeConfig()
 
   useEffect(() => {
     if (
@@ -80,8 +81,6 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
   const workerRef = useRef<Worker | null>(null)
   const interruptBufferRef = useRef<SharedArrayBuffer | null>(null)
   const runningCellRef = useRef<string | null>(null)
-
-  // AI Chat integration
   const {
     status,
     messages,
@@ -92,84 +91,78 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
     setMessages,
   } = useChat({
     initialMessages: initialMessages,
-      api: '/api/chat',
-      maxSteps: 5,
-      headers: {
-        'x-gemini-api-key': apiKey || '',
-      },
-      // We persist messages via a dedicated useEffect to avoid duplications.
-      onFinish: () => {
-        /* No-op: persistence handled in useEffect below */
-      },
-    onResponse: (response) => {
+    api: '/api/chat',
+    maxSteps: 5,
+    headers: {
+      'x-gemini-api-key': apiKey || '',
+    },
+    onFinish: () => {
+      /* No-op: persistence handled in useEffect below */
+    },
+    onResponse: () => {
       if (editingMessageId) {
-        // This is a hack to prevent the AI from responding while editing
-        // A better solution would be to cancel the request
-        // but the Vercel AI SDK doesn't support that yet
         return;
       }
     },
-      async onToolCall({ toolCall }) {
-        try {
-          let result: unknown
-
-          if (toolCall.toolName === 'listCells') {
-            // Get the most up-to-date cells snapshot (may include edits from a
-            // previous tool call in the same step).
-            result = cellsRef.current.map((cell) => ({
-              id: cell.id,
-              type: 'code',
-              text: cell.text,
-              output: cell.output || '',
-            }))
-          } else if (toolCall.toolName === 'updateCell') {
-            const params = toolCall.args as UpdateCellParams
-            result = await executeUpdateCell(params, {
-              onCellCodeChange: (text: string) => {
-                // Update cells synchronously so that a subsequent listCells
-                // call in the same step sees the new content immediately.
-                setCells((prev) => {
-                  const newCells = prev.map((cell) =>
-                    cell.id === params.id ? { ...cell, text } : cell
-                  )
-                  cellsRef.current = newCells
-                  return newCells
-                })
-              },
-              currentCellId: params.id,
-            })
-          } else if (toolCall.toolName === 'createCodeCell') {
-            const params = toolCall.args as CreateCodeCellParams
-            result = await executeCreateCodeCell(params, {
-              onCreateCell: (text: string) => {
-                const newId = `cell-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-                // Use the toolCallId as the parentId to link the cell to this tool call
-                const newCell = createNewCell(newId, toolCall.toolCallId)
-                newCell.text = text
-                setCells((prev) => {
-                  const newCells = [...prev, newCell]
-                  cellsRef.current = newCells
-                  return newCells
-                })
-              },
-              currentMessageId: toolCall.toolCallId,
-            })
-          } else if (toolCall.toolName === 'executeSql') {
-            result = await executeSql(toolCall.args as { sql: string })
-          } else if (toolCall.toolName === 'describeSnowflakeTable') {
-            result = await describeSnowflakeTable(
-              toolCall.args as { table: string }
-            )
-          } else {
-            throw new Error(`Unknown function: ${toolCall.toolName}`)
-          }
-
-          return result
-        } catch (error) {
-          throw error
+    onToolCall: async ({ toolCall }) => {
+      try {
+        let result: unknown;
+        if (toolCall.toolName === 'listCells') {
+          result = cellsRef.current.map((cell) => ({
+            id: cell.id,
+            type: 'code',
+            text: cell.text,
+            output: cell.output || '',
+          }));
+        } else if (toolCall.toolName === 'updateCell') {
+          const params = toolCall.args as UpdateCellParams;
+          result = await executeUpdateCell(params, {
+            onCellCodeChange: (text: string) => {
+              setCells((prev) => {
+                const newCells = prev.map((cell) =>
+                  cell.id === params.id ? { ...cell, text } : cell
+                );
+                cellsRef.current = newCells;
+                return newCells;
+              });
+            },
+            currentCellId: params.id,
+          });
+        } else if (toolCall.toolName === 'createCodeCell') {
+          const params = toolCall.args as CreateCodeCellParams;
+          result = await executeCreateCodeCell(params, {
+            onCreateCell: (text: string) => {
+              const newId = `cell-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              const newCell = createNewCell(newId, toolCall.toolCallId);
+              newCell.text = text;
+              setCells((prev) => {
+                const newCells = [...prev, newCell];
+                cellsRef.current = newCells;
+                return newCells;
+              });
+            },
+            currentMessageId: toolCall.toolCallId,
+          });
+        } else if (toolCall.toolName === 'executeSql') {
+          result = await executeSql(toolCall.args as { sql: string });
+        } else if (toolCall.toolName === 'describeSnowflakeTable') {
+          result = await describeSnowflakeTable(toolCall.args as { table: string });
+        } else {
+          throw new Error(`Unknown function: ${toolCall.toolName}`);
         }
-      },
-    })
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    },
+  });
+    },
+  });
+      } catch (error) {
+        throw error
+      }
+    },
+  })
 
   // Derived conversation items - combine live messages with cells
   const conversationItems: ConversationItem[] = useMemo(() => {
@@ -515,50 +508,37 @@ export default function Home({ activeFile, onUpdate, onDelete }: HomeProps) {
           onStartEdit={setEditingMessageId}
           onCancelEdit={() => setEditingMessageId(null)}
           onSaveEdit={(messageId, newContent) => {
-            const messageIndex = messages.findIndex((m) => m.id === messageId);
-            if (messageIndex === -1) return;
+            const messageIndex = messages.findIndex((m) => m.id === messageId)
+            if (messageIndex === -1) return
 
             // Create a new message object with the updated content
             if (messages[messageIndex].content === newContent) {
-              setEditingMessageId(null);
-              return;
+              setEditingMessageId(null)
+              return
             }
             const updatedMessage = {
               ...messages[messageIndex],
               content: newContent,
-            };
+            }
 
             // Remove all subsequent messages and cells
-            const newMessages = messages.slice(0, messageIndex);
-            const conversationItemsUpToMessage = conversationItems.slice(
-              0,
-              conversationItems.findIndex(
-                (item) =>
-                  item.type === 'message' && item.data.id === messageId
-              ) + 1
-            );
+            const newMessages = messages.slice(0, messageIndex)
             const newCells = cells.filter(
               (cell) =>
                 newMessages.some((m) => m.id === cell.parentId) ||
                 !cell.parentId
-            );
+            )
 
-            const newMessagesWithUpdate = [...newMessages, updatedMessage];
-            setMessages(newMessagesWithUpdate);
-            setCells(newCells);
+            const newMessagesWithUpdate = [...newMessages, updatedMessage]
+            setMessages(newMessagesWithUpdate)
+            setCells(newCells)
 
-            onUpdate({ messages: newMessagesWithUpdate, cells: newCells });
+            onUpdate({ messages: newMessagesWithUpdate, cells: newCells })
 
             // Resubmit the conversation from the edited message
-            handleSubmit(new Event('submit'), {
-              options: {
-                body: {
-                  messages: newMessagesWithUpdate,
-                },
-              },
-            });
+            handleSubmit(new Event('submit'))
 
-            setEditingMessageId(null);
+            setEditingMessageId(null)
           }}
         />
         {isLoading && editingMessageId === null && (

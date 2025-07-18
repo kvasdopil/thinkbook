@@ -14,10 +14,19 @@ const config = {
   preset: 'ts-jest',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^react-markdown$': '<rootDir>/src/__mocks__/react-markdown.js',
+  },
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
   },
   transformIgnorePatterns: [
     'node_modules/(?!(react-markdown|remark-gfm|vfile|unist-util-is|unist-util-visit|unist-util-visit-parents|github-slugger))',
   ],
+  extensionsToTreatAsEsm: ['.ts', '.tsx', '.jsx'],
+  testEnvironmentOptions: {
+    customExportConditions: ['node', 'node-addons'],
+  },
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

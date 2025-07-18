@@ -184,7 +184,18 @@ describe('useNotebookFiles', () => {
     await act(async () => {
       jest.advanceTimersByTime(1000)
       result.current.updateActiveFile({
-        cells: [{ id: 'cell1', content: 'new content' }],
+        cells: [
+          {
+            id: 'cell1',
+            type: 'code',
+            text: 'new content',
+            output: '',
+            tables: [],
+            isCodeVisible: false,
+            executionStatus: 'idle',
+            parentId: null,
+          },
+        ],
       })
     })
 
@@ -214,7 +225,14 @@ describe('useNotebookFiles', () => {
     await act(async () => {
       jest.advanceTimersByTime(1000)
       result.current.updateActiveFile({
-        messages: [{ role: 'user', content: 'new message' }],
+        messages: [
+          {
+            id: '1',
+            role: 'user',
+            content: 'new message',
+            createdAt: new Date(),
+          },
+        ],
       })
     })
 
@@ -227,7 +245,18 @@ describe('useNotebookFiles', () => {
       '1': {
         id: '1',
         title: 'Test File',
-        cells: [{ id: 'cell1', isCodeVisible: false }],
+        cells: [
+          {
+            id: 'cell1',
+            type: 'code',
+            text: '',
+            output: '',
+            tables: [],
+            isCodeVisible: true,
+            executionStatus: 'idle',
+            parentId: null,
+          },
+        ],
         messages: [],
         createdAt: initialDate,
         updatedAt: initialDate,
@@ -243,7 +272,18 @@ describe('useNotebookFiles', () => {
 
     await act(async () => {
       result.current.updateActiveFile({
-        cells: [{ id: 'cell1', isCodeVisible: true }],
+        cells: [
+          {
+            id: 'cell1',
+            type: 'code',
+            text: '',
+            output: '',
+            tables: [],
+            isCodeVisible: true,
+            executionStatus: 'idle',
+            parentId: null,
+          },
+        ],
       })
     })
 
@@ -256,7 +296,18 @@ describe('useNotebookFiles', () => {
       '1': {
         id: '1',
         title: 'Test File',
-        cells: [{ id: 'cell1', executionStatus: 'idle' }],
+        cells: [
+          {
+            id: 'cell1',
+            type: 'code',
+            text: '',
+            output: '',
+            tables: [],
+            isCodeVisible: false,
+            executionStatus: 'running',
+            parentId: null,
+          },
+        ],
         messages: [],
         createdAt: initialDate,
         updatedAt: initialDate,
@@ -272,7 +323,18 @@ describe('useNotebookFiles', () => {
 
     await act(async () => {
       result.current.updateActiveFile({
-        cells: [{ id: 'cell1', executionStatus: 'running' }],
+        cells: [
+          {
+            id: 'cell1',
+            type: 'code',
+            text: '',
+            output: '',
+            tables: [],
+            isCodeVisible: false,
+            executionStatus: 'running',
+            parentId: null,
+          },
+        ],
       })
     })
 
@@ -285,7 +347,18 @@ describe('useNotebookFiles', () => {
       '1': {
         id: '1',
         title: 'Test File',
-        cells: [{ id: 'cell1', output: '' }],
+        cells: [
+          {
+            id: 'cell1',
+            type: 'code',
+            text: '',
+            output: 'new output',
+            tables: [],
+            isCodeVisible: false,
+            executionStatus: 'idle',
+            parentId: null,
+          },
+        ],
         messages: [],
         createdAt: initialDate,
         updatedAt: initialDate,
@@ -301,7 +374,18 @@ describe('useNotebookFiles', () => {
 
     await act(async () => {
       result.current.updateActiveFile({
-        cells: [{ id: 'cell1', output: 'new output' }],
+        cells: [
+          {
+            id: 'cell1',
+            type: 'code',
+            text: '',
+            output: 'new output',
+            tables: [],
+            isCodeVisible: false,
+            executionStatus: 'idle',
+            parentId: null,
+          },
+        ],
       })
     })
 

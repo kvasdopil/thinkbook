@@ -1,14 +1,16 @@
 import React from 'react'
 import { FaPlus } from 'react-icons/fa'
 import { format, isToday, isYesterday } from 'date-fns'
+import type { CellData } from '@/types/cell'
+import type { Message } from 'ai/react'
 
 export interface NotebookFile {
   id: string
   createdAt: string
   updatedAt: string
   title: string
-  cells: any[] // Replace with actual Cell type
-  messages: any[] // Replace with actual MessagePart type
+  cells: CellData[]
+  messages: Message[]
 }
 
 interface FilePanelProps {

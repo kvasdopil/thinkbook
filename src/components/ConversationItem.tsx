@@ -5,21 +5,18 @@ import { ConversationItem as ConversationItemType } from '@/types/conversation'
 import { CellData, CellOperations } from '@/types/cell'
 import { Message } from 'ai/react'
 import Cell from './Cell'
-import MessageItem from './MessageItem';
-import { useChat } from 'ai/react';
-import MarkdownComponents from './MarkdownComponents';
-import ToolCallDisplay from './ToolCallDisplay';
+import MessageItem from './MessageItem'
 
 interface ConversationItemProps {
-  item: ConversationItemType;
-  cellOperations?: CellOperations;
-  isWorkerReady?: boolean;
-  isStopping?: boolean;
-  sharedArrayBufferSupported?: boolean;
-  editingMessageId: string | null;
-  onStartEdit: (messageId: string) => void;
-  onSaveEdit: (messageId: string, newContent: string) => void;
-  onCancelEdit: () => void;
+  item: ConversationItemType
+  cellOperations?: CellOperations
+  isWorkerReady?: boolean
+  isStopping?: boolean
+  sharedArrayBufferSupported?: boolean
+  editingMessageId: string | null
+  onStartEdit: (messageId: string) => void
+  onSaveEdit: (messageId: string, newContent: string) => void
+  onCancelEdit: () => void
 }
 
 export default function ConversationItem({
@@ -34,7 +31,7 @@ export default function ConversationItem({
   onCancelEdit,
 }: ConversationItemProps) {
   if (item.type === 'message') {
-    const message = item.data as Message;
+    const message = item.data as Message
     return (
       <MessageItem
         message={message}
@@ -43,7 +40,7 @@ export default function ConversationItem({
         onSave={(newContent) => onSaveEdit(message.id, newContent)}
         onCancel={onCancelEdit}
       />
-    );
+    )
   } else if (item.type === 'cell') {
     const cell = item.data as CellData
 

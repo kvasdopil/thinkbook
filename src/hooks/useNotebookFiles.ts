@@ -95,13 +95,13 @@ export const useNotebookFiles = () => {
         ...updatedContent,
       }
 
-      // Update title if first cell's content changes
+      // Update title if first cell's text changes
       if (
         updatedContent.cells &&
         updatedContent.cells.length > 0 &&
-        updatedContent.cells[0].content
+        updatedContent.cells[0].text
       ) {
-        const firstCellContent = updatedContent.cells[0].content
+        const firstCellContent = updatedContent.cells[0].text
         const newTitle =
           firstCellContent
             .split('\n')[0]
