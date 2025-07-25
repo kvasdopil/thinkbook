@@ -1,7 +1,6 @@
 /* eslint-disable react/display-name */
 import React from 'react'
-import { render, screen } from '@testing-library/react'
-import { act } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import Home from '../components/Home'
 import { useGeminiApiKey } from '../hooks/useGeminiApiKey'
 import { useSnowflakeConfig } from '../hooks/useSnowflakeConfig'
