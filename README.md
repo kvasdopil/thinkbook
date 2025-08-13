@@ -23,6 +23,4 @@
 - /src/utils - reusable utility code
 - /src/hooks - react hooks
 
-# Implemented user-stories
-
-none yet
+Implemented user-stories are stored in /docs/IMPLEMENTED.md
