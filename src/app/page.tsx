@@ -1,6 +1,7 @@
 'use client';
 
 import { PythonRunner } from '@/components/PythonRunner';
+import { AIChat } from '@/components/AIChat';
 import { useState } from 'react';
 
 export default function Home() {
@@ -12,6 +13,7 @@ export default function Home() {
     <main className="min-h-screen p-8 flex flex-col items-center gap-6">
       <h1 className="text-3xl font-semibold">Python Runner</h1>
       <p className="text-base">Hello World</p>
+      <AIChat />
       <div className="flex gap-2 items-center">
         <button
           className="px-3 py-1.5 rounded border border-black/[.08] hover:bg-[#f2f2f2] cursor-pointer"

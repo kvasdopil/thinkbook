@@ -50,3 +50,11 @@
 - Smooth CSS transition using `max-height`/opacity with responsive layout
 - Accessibility: `aria-label`/`title` on buttons and keyboard focusable elements
 - Added Playwright tests `tests/code-cell-toggle-and-status.spec.ts`
+
+## 0006.AI_CHAT
+
+- Added chat panel above the code cell using `useChat` from Vercel AI SDK
+- Streaming backend at `src/app/api/chat/route.ts` using `gemini-2.5-flash`
+- System prompt embedded in the route for now; renders assistant/user messages via `message.parts`
+- Keyboard: Cmd/Ctrl+Enter sends; Shift/Enter for newline
+- Status shown via `status` from `useChat`
