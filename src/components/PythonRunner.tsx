@@ -9,6 +9,7 @@ import {
   FaCheckCircle,
   FaTimesCircle,
   FaBan,
+  FaTrash,
 } from 'react-icons/fa';
 import Editor from '@monaco-editor/react';
 import { NotebookCell, useNotebook } from '@/hooks/notebook-store';
@@ -23,10 +24,23 @@ type WorkerMessage =
   | { type: 'execution-cancelled' }
   | { type: 'done' };
 
-export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: string) => void }) {
+export function PythonRunner({
+  id,
+  onOutputChange,
+}: {
+  id: string;
+  onOutputChange?: (output: string) => void;
+}) {
   const notebook = useNotebook();
-  const { registerOrUpdateCell, registerController, setCellOutput, updateCellStatus, setCellText } =
-    notebook;
+  const {
+    registerOrUpdateCell,
+    registerController,
+    setCellOutput,
+    updateCellStatus,
+    setCellText,
+    deleteCell,
+    cells,
+  } = notebook;
   const [output, setOutput] = useState<string>('');
   const [isReady, setIsReady] = useState<boolean>(false);
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -44,18 +58,27 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
   const forceStopTimerRef = useRef<number | null>(null);
   const workerMessageHandlerRef = useRef<((e: MessageEvent<WorkerMessage>) => void) | null>(null);
   const errorOccurredRef = useRef<boolean>(false);
+  const runResolveRef = useRef<(() => void) | null>(null);
 
   // Register cell in notebook on mount
   useEffect(() => {
-    const cellId = 'py-1';
-    registerOrUpdateCell({
-      id: cellId,
-      type: 'python',
-      text: editorCodeRef.current,
-      status: 'idle',
-      output: [],
-    } as NotebookCell);
-    registerController(cellId, {
+    // If the store already has a cell with this id, initialize editor with its text; otherwise register
+    const existing = notebook.getSnapshot().find((c) => c.id === id);
+    if (existing) {
+      if (existing.text) {
+        editorCodeRef.current = existing.text;
+      }
+      setStatus(existing.status as ExecutionStatus);
+    } else {
+      registerOrUpdateCell({
+        id,
+        type: 'python',
+        text: editorCodeRef.current,
+        status: 'idle',
+        output: [],
+      } as NotebookCell);
+    }
+    registerController(id, {
       setText: (text: string) => {
         editorCodeRef.current = text;
         const editor = editorInstanceRef.current;
@@ -64,11 +87,20 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
           editor.setValue(text);
         }
       },
+      run: async () => {
+        await run();
+      },
+      stop: () => {
+        stop();
+      },
+      isRunning: () => isRunning,
     });
     return () => {
-      registerController(cellId, null);
+      registerController(id, null);
     };
-  }, [registerController, registerOrUpdateCell]);
+    // Intentionally do not include isRunning/run/stop in deps to avoid re-registering controller on every change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, registerController, registerOrUpdateCell, notebook]);
 
   const appendOutput = useCallback((line: string) => {
     setOutput((prev) => prev + line);
@@ -76,8 +108,8 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
 
   useEffect(() => {
     if (onOutputChange) onOutputChange(output);
-    setCellOutput('py-1', output.split('\n'));
-  }, [output, onOutputChange, setCellOutput]);
+    setCellOutput(id, output.split('\n'));
+  }, [id, output, onOutputChange, setCellOutput]);
 
   const onMessage = useCallback(
     (event: MessageEvent<WorkerMessage>) => {
@@ -125,6 +157,10 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
         }
         // reset error flag for next run
         errorOccurredRef.current = false;
+        if (runResolveRef.current) {
+          runResolveRef.current();
+          runResolveRef.current = null;
+        }
         return;
       }
     },
@@ -148,7 +184,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
       const sab = new SharedArrayBuffer(1);
       interruptSABRef.current = sab;
       w.postMessage({ type: 'setInterruptBuffer', sab });
-    } catch (_e) {
+    } catch {
       // SharedArrayBuffer not available (headers missing). We'll show an error on cancellation attempt
     }
   }, []);
@@ -189,7 +225,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
   }, [attachWorker]);
 
   const run = useCallback(() => {
-    if (!workerRef.current || !isReady) return;
+    if (!workerRef.current) return Promise.resolve();
     // Clear any previous interrupt signal before starting a new run
     if (interruptSABRef.current) {
       const buf = new Uint8Array(interruptSABRef.current);
@@ -202,10 +238,17 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
     stopRequestedRef.current = false;
     setIsRunning(true);
     setStatus('running');
-    updateCellStatus('py-1', 'running');
+    updateCellStatus(id, 'running');
     setOutput('');
-    workerRef.current.postMessage({ type: 'run', code: editorCodeRef.current });
-  }, [isReady, updateCellStatus]);
+    const code = editorInstanceRef.current?.getValue() ?? editorCodeRef.current;
+    editorCodeRef.current = code;
+    // ensure store text is in sync
+    setCellText(id, code);
+    workerRef.current.postMessage({ type: 'run', code });
+    return new Promise<void>((resolve) => {
+      runResolveRef.current = resolve;
+    });
+  }, [id, setCellText, updateCellStatus]);
 
   const stop = useCallback(() => {
     if (!workerRef.current) return;
@@ -225,7 +268,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
     appendOutput('Stopping...\n');
     appendOutput('Execution interrupted by user\n');
     setStatus('cancelled');
-    updateCellStatus('py-1', 'cancelled');
+    updateCellStatus(id, 'cancelled');
     // Safety: force terminate and recreate worker if it doesn't acknowledge cancellation quickly
     if (forceStopTimerRef.current) {
       clearTimeout(forceStopTimerRef.current);
@@ -239,7 +282,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
       setStatus('cancelled');
       forceStopTimerRef.current = null;
     }, 1000);
-  }, [appendOutput, recreateWorker, updateCellStatus]);
+  }, [appendOutput, id, recreateWorker, updateCellStatus]);
 
   const handleEditorChange = useCallback(
     (value?: string) => {
@@ -277,12 +320,19 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
           options={{
             minimap: { enabled: false },
             fontSize: 14,
+            readOnly: isRunning,
           }}
         />
       </div>
     ),
-    [handleEditorChange, isEditorVisible],
+    [handleEditorChange, isEditorVisible, isRunning],
   );
+
+  // Keep editor readOnly in sync when running state changes
+  useEffect(() => {
+    const editor = editorInstanceRef.current;
+    if (editor) editor.updateOptions({ readOnly: isRunning });
+  }, [isRunning]);
 
   const parseTopLevelComment = useCallback((): string => {
     const code = editorCodeRef.current ?? '';
@@ -356,13 +406,28 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
           {StatusIcon}
           <span className="text-sm capitalize">{status}</span>
         </button>
+        <button
+          className="ml-auto px-3 py-2 rounded border border-black/[.08] hover:bg-[#f2f2f2] cursor-pointer flex items-center gap-2 text-red-600"
+          aria-label="Delete cell"
+          title="Delete cell"
+          onClick={() => {
+            if (isRunning) return;
+            if (window.confirm('Delete this cell?')) {
+              deleteCell(id);
+            }
+          }}
+          disabled={isRunning}
+        >
+          <FaTrash />
+          <span className="text-sm">Delete</span>
+        </button>
       </div>
       {editor}
       <div className="flex gap-2">
         <button
           className="px-4 py-2 rounded border border-black/[.08] hover:bg-[#f2f2f2] cursor-pointer"
           onClick={run}
-          disabled={!isReady || isRunning}
+          disabled={isRunning}
         >
           {isRunning ? 'Running…' : 'Run'}
         </button>

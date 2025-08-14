@@ -35,41 +35,52 @@ const workerScope = self as unknown as ExtendedWorkerScope;
 
 let pyodideInstance: PyodideApi | null = null;
 let isLoading = false;
+let loadingPromise: Promise<void> | null = null;
 let interruptBuffer: Uint8Array | null = null;
 
 async function ensurePyodideLoaded(): Promise<void> {
-  if (pyodideInstance || isLoading) {
+  if (pyodideInstance) return;
+  if (loadingPromise) {
+    await loadingPromise;
     return;
   }
-  isLoading = true;
-  pyodideInstance = await workerScope.loadPyodide({
-    indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.28.0/full/',
-  });
-  // Wire stdout/stderr streaming to the worker
-  if (pyodideInstance && typeof pyodideInstance.setStdout === 'function') {
-    pyodideInstance.setStdout({
-      batched: (s: string) => {
-        workerScope.postMessage({ type: 'out', value: s });
-      },
+  loadingPromise = (async () => {
+    if (pyodideInstance) return;
+    isLoading = true;
+    pyodideInstance = await workerScope.loadPyodide({
+      indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.28.0/full/',
     });
+    // Wire stdout/stderr streaming to the worker
+    if (pyodideInstance && typeof pyodideInstance.setStdout === 'function') {
+      pyodideInstance.setStdout({
+        batched: (s: string) => {
+          workerScope.postMessage({ type: 'out', value: s });
+        },
+      });
+    }
+    if (pyodideInstance && typeof pyodideInstance.setStderr === 'function') {
+      pyodideInstance.setStderr({
+        batched: (s: string) => {
+          workerScope.postMessage({ type: 'err', value: s });
+        },
+      });
+    }
+    // If interrupt buffer was configured before Pyodide loaded, apply it now
+    if (
+      pyodideInstance &&
+      interruptBuffer &&
+      typeof pyodideInstance.setInterruptBuffer === 'function'
+    ) {
+      pyodideInstance.setInterruptBuffer(interruptBuffer);
+    }
+    isLoading = false;
+    workerScope.postMessage({ type: 'ready' });
+  })();
+  try {
+    await loadingPromise;
+  } finally {
+    loadingPromise = null;
   }
-  if (pyodideInstance && typeof pyodideInstance.setStderr === 'function') {
-    pyodideInstance.setStderr({
-      batched: (s: string) => {
-        workerScope.postMessage({ type: 'err', value: s });
-      },
-    });
-  }
-  // If interrupt buffer was configured before Pyodide loaded, apply it now
-  if (
-    pyodideInstance &&
-    interruptBuffer &&
-    typeof pyodideInstance.setInterruptBuffer === 'function'
-  ) {
-    pyodideInstance.setInterruptBuffer(interruptBuffer);
-  }
-  isLoading = false;
-  workerScope.postMessage({ type: 'ready' });
 }
 
 workerScope.addEventListener('message', async (event: MessageEvent<IncomingMessage>) => {

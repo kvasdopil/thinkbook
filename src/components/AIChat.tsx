@@ -71,7 +71,7 @@ export function AIChat() {
       ? '/api/chat?mock=1'
       : '/api/chat';
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, addToolResult } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     api: apiPath,
     initialInput: '',
     maxSteps: 5,

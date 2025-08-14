@@ -67,3 +67,10 @@
 - `PythonRunner` registers a cell and syncs status/output; exposes controller to update text
 - `AIChat` executes tool calls on the client via `onToolCall`, validates with Zod, and sends results with `addToolResult`
 - Chat UI renders `parts` only and shows function call/result balloons with status colors (blue/green/red)
+
+## 0008.MULTIPLE_CODE_CELLS
+
+- Notebook store now maintains an ordered list of cells and exposes controllers per cell (`run`, `stop`, `setText`, `isRunning`), plus `deleteCell`
+- `PythonRunner` refactored to accept a cell `id`, be read-only while running, and provide a delete action with confirmation
+- Page renders a single AI chat and a list of Python cells with controls for "Run All" and "+ Add Cell"; "Run All" executes sequentially top-to-bottom; actions disabled while any cell is running
+- Each cell isolates its own output, clears output on run, and updates status to complete/cancelled/failed accordingly
