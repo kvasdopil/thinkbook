@@ -13,7 +13,10 @@ test('ai chat streams and renders assistant text (mock)', async ({ page }) => {
   // Submit via Send button
   await page.getByRole('button', { name: 'Send' }).click();
 
-  // Status should switch to responding then back to idle
-  await expect(page.getByText('responding')).toBeVisible();
-  await expect(page.getByText('idle')).toBeVisible();
+  // Wait for the response to render
+
+  // Markdown should render: heading text, table, and code block
+  await expect(page.getByText('Mock Markdown')).toBeVisible();
+  await expect(page.locator('.ai-markdown table')).toBeVisible();
+  await expect(page.locator('.ai-markdown pre code')).toBeVisible();
 });

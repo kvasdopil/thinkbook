@@ -76,6 +76,7 @@ export function PythonRunner({
         text: editorCodeRef.current,
         status: 'idle',
         output: [],
+        linkedMessageId: null,
       } as NotebookCell);
     }
     registerController(id, {

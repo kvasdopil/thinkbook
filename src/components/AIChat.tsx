@@ -2,6 +2,7 @@
 
 import { useChat } from 'ai/react';
 import { useCallback, useMemo, useRef } from 'react';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { useNotebook } from '@/hooks/notebook-store';
 import { listCellsSchema, listCellsToolName } from '@/ai-functions/list-cells';
 import { updateCellSchema, updateCellToolName } from '@/ai-functions/update-cell';
@@ -118,11 +119,7 @@ export function AIChat() {
         if ((p as { type?: string }).type === 'text') {
           const tp = p as TextPart;
           const text = tp.text ?? tp.textDelta ?? '';
-          return (
-            <div key={idx} className="whitespace-pre-wrap">
-              {text}
-            </div>
-          );
+          return <MarkdownRenderer key={idx} content={text} />;
         }
         if ((p as { type?: string }).type === 'tool-call') {
           const tp = p as ToolCallPart;
@@ -162,7 +159,7 @@ export function AIChat() {
           className={`text-sm whitespace-pre-wrap leading-relaxed ${m.role === 'user' ? 'text-black' : 'text-black/80'}`}
         >
           <div className="font-medium mb-1">{roleLabel}</div>
-          {hasAnyParts ? partElements : <div>{getMessageText(m)}</div>}
+          {hasAnyParts ? partElements : <MarkdownRenderer content={getMessageText(m)} />}
         </div>
       );
     });

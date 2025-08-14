@@ -74,3 +74,19 @@
 - `PythonRunner` refactored to accept a cell `id`, be read-only while running, and provide a delete action with confirmation
 - Page renders a single AI chat and a list of Python cells with controls for "Run All" and "+ Add Cell"; "Run All" executes sequentially top-to-bottom; actions disabled while any cell is running
 - Each cell isolates its own output, clears output on run, and updates status to complete/cancelled/failed accordingly
+
+## 0009.UNIFIED_CHAT_AND_NOTEBOOK
+
+- Added `linkedMessageId` to `NotebookCell` to associate cells with the preceding chat message (or `null` if none)
+- Implemented `UnifiedConversation` component that renders a single chronological list combining chat messages and notebook cells
+- New cells are appended after the current last conversation item and linked to the last message id
+- Conversation area is scrollable; input panel is fixed at the bottom; run-all and add-cell controls moved into the conversation header
+- Code split into dedicated components under `src/components` and integrated on the homepage
+
+## 0011.MARKDOWN
+
+- Integrated `react-markdown` with `remark-gfm` to render assistant AI outputs as full Markdown (headings, lists, tables, code blocks)
+- Added `MarkdownRenderer` component and scoped styles under `.ai-markdown` ensuring full-width content with no background/border
+- Ensured large tables and code blocks scroll horizontally within the output area only
+- Updated mock AI response to include Markdown for testing; added Playwright assertions in `tests/ai-chat.spec.ts`
+- No a11y changes; text-only rendering

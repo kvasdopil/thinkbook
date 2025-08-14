@@ -22,3 +22,27 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Scoped markdown styles for AI output */
+.ai-markdown {
+  /* Full width, no extra background or border */
+}
+.ai-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow-x: auto;
+  display: block;
+}
+.ai-markdown th,
+.ai-markdown td {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 6px 8px;
+  text-align: left;
+}
+.ai-markdown pre {
+  overflow-x: auto;
+}
+.ai-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9em;
+}

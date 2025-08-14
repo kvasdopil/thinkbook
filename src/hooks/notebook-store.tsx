@@ -10,6 +10,7 @@ export type NotebookCell = {
   text: string;
   status: CellStatus;
   output: string[];
+  linkedMessageId: string | null;
 };
 
 export type CellController = {
@@ -42,6 +43,7 @@ export function NotebookProvider({ children }: { children: React.ReactNode }) {
       text: "print('Hello from Python')",
       status: 'idle',
       output: [],
+      linkedMessageId: null,
     },
   }));
   const [order, setOrder] = useState<string[]>(() => ['cell-1']);
@@ -56,6 +58,8 @@ export function NotebookProvider({ children }: { children: React.ReactNode }) {
         text: cell.text ?? existing?.text ?? '',
         status: cell.status ?? existing?.status ?? 'idle',
         output: cell.output ?? existing?.output ?? [],
+        linkedMessageId:
+          (cell as Partial<NotebookCell>).linkedMessageId ?? existing?.linkedMessageId ?? null,
       };
       return { ...prev, [cell.id]: next };
     });

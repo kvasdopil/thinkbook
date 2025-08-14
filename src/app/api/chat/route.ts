@@ -33,8 +33,9 @@ export async function POST(req: Request) {
             message: {
               id: 'msg1',
               role: 'assistant',
-              // Use parts to match UI that prefers parts-based rendering
-              parts: [{ type: 'text', text: 'This is a mock response.' }],
+              // Provide simple string content for broad client compatibility
+              content:
+                '# Mock Markdown\n\nHere is a table and some code.\n\n| Col A | Col B |\n| --- | --- |\n| 1 | 2 |\n\n```ts\nconsole.log("hello");\n```',
             },
           };
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(full)}\n\n`));
