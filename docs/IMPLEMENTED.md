@@ -40,3 +40,13 @@
 - Re-enabled Run after cancellation (`done` message)
 - Added COOP/COEP headers in `next.config.ts` to enable SharedArrayBuffer
 - Added e2e test to cancel an infinite loop
+
+## 0005.CODE_CELL_TOGGLE_AND_STATUS
+
+- Added code editor visibility toggle with `FaRegEye`/`FaRegEyeSlash`, default hidden
+- When collapsed, show the top-level Python comment block as markdown-like text
+- Added a status button with icons/colors for `idle`, `running`, `complete`, `failed`, `cancelled`
+- Status button starts run (when idle/complete/failed/cancelled) and stops (when running)
+- Smooth CSS transition using `max-height`/opacity with responsive layout
+- Accessibility: `aria-label`/`title` on buttons and keyboard focusable elements
+- Added Playwright tests `tests/code-cell-toggle-and-status.spec.ts`

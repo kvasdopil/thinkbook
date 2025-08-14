@@ -1,6 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  FaRegEye,
+  FaRegEyeSlash,
+  FaRegCircle,
+  FaSpinner,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaBan,
+} from 'react-icons/fa';
 import Editor from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
 
@@ -17,6 +26,9 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
   const [output, setOutput] = useState<string>('');
   const [isReady, setIsReady] = useState<boolean>(false);
   const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [isEditorVisible, setIsEditorVisible] = useState<boolean>(false);
+  type ExecutionStatus = 'idle' | 'running' | 'complete' | 'failed' | 'cancelled';
+  const [status, setStatus] = useState<ExecutionStatus>('idle');
   const editorCodeRef = useRef<string>(`print('Hello from Python')`);
   const workerRef = useRef<Worker | null>(null);
   const workerInitOnceRef = useRef<boolean>(false);
@@ -26,6 +38,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
   const cancellationMessageShownRef = useRef<boolean>(false);
   const forceStopTimerRef = useRef<number | null>(null);
   const workerMessageHandlerRef = useRef<((e: MessageEvent<WorkerMessage>) => void) | null>(null);
+  const errorOccurredRef = useRef<boolean>(false);
 
   const appendOutput = useCallback((line: string) => {
     setOutput((prev) => prev + line);
@@ -52,6 +65,8 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
       }
       if (msg.type === 'error') {
         appendOutput(`Error: ${msg.value}\n`);
+        errorOccurredRef.current = true;
+        setStatus('failed');
         return;
       }
       if (msg.type === 'execution-cancelled') {
@@ -63,6 +78,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
           clearTimeout(forceStopTimerRef.current);
           forceStopTimerRef.current = null;
         }
+        setStatus('cancelled');
         return;
       }
       if (msg.type === 'done') {
@@ -73,10 +89,15 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
           clearTimeout(forceStopTimerRef.current);
           forceStopTimerRef.current = null;
         }
+        if (!errorOccurredRef.current && status !== 'cancelled') {
+          setStatus('complete');
+        }
+        // reset error flag for next run
+        errorOccurredRef.current = false;
         return;
       }
     },
-    [appendOutput],
+    [appendOutput, status],
   );
 
   // Stable message callback ref to avoid re-subscribing the worker on parent re-renders
@@ -149,6 +170,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
     }
     stopRequestedRef.current = false;
     setIsRunning(true);
+    setStatus('running');
     setOutput('');
     workerRef.current.postMessage({ type: 'run', code: editorCodeRef.current });
   }, [isReady]);
@@ -170,6 +192,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
     setIsRunning(true);
     appendOutput('Stopping...\n');
     appendOutput('Execution interrupted by user\n');
+    setStatus('cancelled');
     // Safety: force terminate and recreate worker if it doesn't acknowledge cancellation quickly
     if (forceStopTimerRef.current) {
       clearTimeout(forceStopTimerRef.current);
@@ -180,6 +203,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
       stopRequestedRef.current = false;
       cancellationMessageShownRef.current = false;
       setIsRunning(false);
+      setStatus('cancelled');
       forceStopTimerRef.current = null;
     }, 1000);
   }, [appendOutput, recreateWorker]);
@@ -190,7 +214,12 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
 
   const editor = useMemo(
     () => (
-      <div className="w-full">
+      <div
+        className="w-full overflow-hidden transition-all duration-200"
+        data-testid="code-editor"
+        style={{ maxHeight: isEditorVisible ? 340 : 0, opacity: isEditorVisible ? 1 : 0 }}
+        aria-hidden={!isEditorVisible}
+      >
         <Editor
           height="300px"
           defaultLanguage="python"
@@ -210,11 +239,82 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
         />
       </div>
     ),
-    [handleEditorChange],
+    [handleEditorChange, isEditorVisible],
   );
+
+  const parseTopLevelComment = useCallback((): string => {
+    const code = editorCodeRef.current ?? '';
+    const lines = code.split('\n');
+    const commentLines: string[] = [];
+    for (const line of lines) {
+      if (line.trim().startsWith('#')) {
+        commentLines.push(line.replace(/^\s*#\s?/, ''));
+      } else if (line.trim() === '') {
+        // allow empty lines within the top comment block
+        commentLines.push('');
+      } else {
+        break;
+      }
+    }
+    return commentLines.join('\n').trim();
+  }, []);
+
+  const topLevelComment = parseTopLevelComment();
+
+  const StatusIcon = useMemo(() => {
+    switch (status) {
+      case 'running':
+        return <FaSpinner className="animate-spin" />;
+      case 'complete':
+        return <FaCheckCircle />;
+      case 'failed':
+        return <FaTimesCircle />;
+      case 'cancelled':
+        return <FaBan />;
+      case 'idle':
+      default:
+        return <FaRegCircle />;
+    }
+  }, [status]);
+
+  const statusColor = useMemo(() => {
+    switch (status) {
+      case 'running':
+        return 'text-blue-600';
+      case 'complete':
+        return 'text-green-600';
+      case 'failed':
+        return 'text-red-600';
+      case 'cancelled':
+        return 'text-orange-600';
+      case 'idle':
+      default:
+        return 'text-gray-500';
+    }
+  }, [status]);
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-3xl">
+      {/* Code visibility toggle + status */}
+      <div className="flex gap-2 items-center flex-wrap">
+        <button
+          className="px-3 py-2 rounded border border-black/[.08] hover:bg-[#f2f2f2] cursor-pointer flex items-center gap-2"
+          aria-label={isEditorVisible ? 'Hide code' : 'Show code'}
+          onClick={() => setIsEditorVisible((v) => !v)}
+        >
+          {isEditorVisible ? <FaRegEyeSlash /> : <FaRegEye />}
+          <span className="text-sm">{isEditorVisible ? 'Hide code' : 'Show code'}</span>
+        </button>
+        <button
+          className={`px-3 py-2 rounded border border-black/[.08] hover:bg-[#f2f2f2] cursor-pointer flex items-center gap-2 ${statusColor}`}
+          aria-label={`Status: ${status}`}
+          title={isRunning ? 'Stop' : 'Run'}
+          onClick={isRunning ? stop : run}
+        >
+          {StatusIcon}
+          <span className="text-sm capitalize">{status}</span>
+        </button>
+      </div>
       {editor}
       <div className="flex gap-2">
         <button
@@ -233,6 +333,11 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
           </button>
         ) : null}
       </div>
+      {!isEditorVisible && topLevelComment ? (
+        <div className="w-full p-3 rounded border border-black/[.08] bg-black/[.02] text-sm whitespace-pre-wrap">
+          {topLevelComment}
+        </div>
+      ) : null}
       <pre className="whitespace-pre-wrap text-sm p-3 rounded border border-black/[.08] min-h-[120px]">
         {output}
       </pre>
