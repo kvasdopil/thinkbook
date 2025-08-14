@@ -11,6 +11,7 @@ import {
   FaBan,
 } from 'react-icons/fa';
 import Editor from '@monaco-editor/react';
+import { NotebookCell, useNotebook } from '@/hooks/notebook-store';
 import type * as Monaco from 'monaco-editor';
 
 type WorkerMessage =
@@ -23,6 +24,7 @@ type WorkerMessage =
   | { type: 'done' };
 
 export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: string) => void }) {
+  const notebook = useNotebook();
   const [output, setOutput] = useState<string>('');
   const [isReady, setIsReady] = useState<boolean>(false);
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -40,13 +42,40 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
   const workerMessageHandlerRef = useRef<((e: MessageEvent<WorkerMessage>) => void) | null>(null);
   const errorOccurredRef = useRef<boolean>(false);
 
+  // Register cell in notebook on mount
+  useEffect(() => {
+    const cellId = 'py-1';
+    notebook.registerOrUpdateCell({
+      id: cellId,
+      type: 'python',
+      text: editorCodeRef.current,
+      status: 'idle',
+      output: [],
+    } as NotebookCell);
+    notebook.registerController(cellId, {
+      setText: (text: string) => {
+        editorCodeRef.current = text;
+        const editor = editorInstanceRef.current;
+        if (editor && editor.getValue() !== text) {
+          editor.setValue(text);
+        }
+      },
+    });
+    return () => {
+      notebook.registerController(cellId, null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const appendOutput = useCallback((line: string) => {
     setOutput((prev) => prev + line);
   }, []);
 
   useEffect(() => {
     if (onOutputChange) onOutputChange(output);
-  }, [output, onOutputChange]);
+    // Sync output to notebook store
+    notebook.setCellOutput('py-1', output.split('\n'));
+  }, [output, onOutputChange, notebook]);
 
   const onMessage = useCallback(
     (event: MessageEvent<WorkerMessage>) => {
@@ -171,9 +200,10 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
     stopRequestedRef.current = false;
     setIsRunning(true);
     setStatus('running');
+    notebook.updateCellStatus('py-1', 'running');
     setOutput('');
     workerRef.current.postMessage({ type: 'run', code: editorCodeRef.current });
-  }, [isReady]);
+  }, [isReady, notebook]);
 
   const stop = useCallback(() => {
     if (!workerRef.current) return;
@@ -193,6 +223,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
     appendOutput('Stopping...\n');
     appendOutput('Execution interrupted by user\n');
     setStatus('cancelled');
+    notebook.updateCellStatus('py-1', 'cancelled');
     // Safety: force terminate and recreate worker if it doesn't acknowledge cancellation quickly
     if (forceStopTimerRef.current) {
       clearTimeout(forceStopTimerRef.current);
@@ -206,11 +237,15 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
       setStatus('cancelled');
       forceStopTimerRef.current = null;
     }, 1000);
-  }, [appendOutput, recreateWorker]);
+  }, [appendOutput, recreateWorker, notebook]);
 
-  const handleEditorChange = useCallback((value?: string) => {
-    editorCodeRef.current = value ?? '';
-  }, []);
+  const handleEditorChange = useCallback(
+    (value?: string) => {
+      editorCodeRef.current = value ?? '';
+      notebook.setCellText('py-1', editorCodeRef.current);
+    },
+    [notebook],
+  );
 
   const editor = useMemo(
     () => (

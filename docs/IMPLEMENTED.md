@@ -58,3 +58,12 @@
 - System prompt embedded in the route for now; renders assistant/user messages via `message.parts`
 - Keyboard: Cmd/Ctrl+Enter sends; Shift/Enter for newline
 - Status shown via `status` from `useChat`
+
+## 0007.AI_FUNCTION_CALLS
+
+- Added `src/ai-functions/` with Zod schemas and metadata for tools: `listCells()` and `updateCell(id, text)`
+- Wired tools into `/api/chat` with `maxSteps: 5`; backend exports metadata only
+- Implemented a lightweight notebook store `useNotebook` to track cells with `{id, type, text, status, output}`
+- `PythonRunner` registers a cell and syncs status/output; exposes controller to update text
+- `AIChat` executes tool calls on the client via `onToolCall`, validates with Zod, and sends results with `addToolResult`
+- Chat UI renders `parts` only and shows function call/result balloons with status colors (blue/green/red)

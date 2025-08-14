@@ -1,9 +1,21 @@
 'use client';
 
 import { useChat } from 'ai/react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
+import { useNotebook } from '@/hooks/notebook-store';
+import { listCellsSchema, listCellsToolName } from '@/ai-functions/list-cells';
+import { updateCellSchema, updateCellToolName } from '@/ai-functions/update-cell';
 
-type Part = { type: string; text?: string; textDelta?: string };
+type TextPart = { type: 'text'; text?: string; textDelta?: string };
+type ToolCallPart = { type: 'tool-call'; toolCallId: string; toolName: string; args: unknown };
+type ToolResultPart = {
+  type: 'tool-result';
+  toolCallId: string;
+  toolName: string;
+  result: unknown;
+  isError?: boolean;
+};
+type Part = TextPart | ToolCallPart | ToolResultPart | { type: string; [key: string]: unknown };
 type MessageWithParts = { parts?: Part[] };
 
 function hasParts(value: unknown): value is MessageWithParts {
@@ -16,9 +28,14 @@ function hasParts(value: unknown): value is MessageWithParts {
 function getMessageText(value: unknown): string {
   if (hasParts(value)) {
     return (value.parts ?? [])
-      .map((p) =>
-        typeof p.text === 'string' ? p.text : typeof p.textDelta === 'string' ? p.textDelta : '',
-      )
+      .map((p) => {
+        const maybe = p as { text?: string; textDelta?: string };
+        return typeof maybe.text === 'string'
+          ? maybe.text
+          : typeof maybe.textDelta === 'string'
+            ? maybe.textDelta
+            : '';
+      })
       .join('');
   }
   const maybe = value as { content?: unknown };
@@ -37,6 +54,7 @@ function getMessageText(value: unknown): string {
 
 export function AIChat() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const notebook = useNotebook();
 
   const apiPath =
     typeof window !== 'undefined' &&
@@ -44,9 +62,37 @@ export function AIChat() {
       ? '/api/chat?mock=1'
       : '/api/chat';
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, addToolResult } = useChat({
     api: apiPath,
     initialInput: '',
+    maxSteps: 5,
+    onToolCall: async ({ toolCall }) => {
+      try {
+        const { toolName, args, toolCallId } = toolCall;
+        if (toolName === listCellsToolName) {
+          const parsed = listCellsSchema.parse(args ?? {});
+          void parsed; // no-op, schema ensures structure
+          const snapshot = notebook.getSnapshot().map((c) => ({
+            id: c.id,
+            type: c.type,
+            text: c.text,
+            status: c.status,
+            output: c.output,
+          }));
+          addToolResult({ toolCallId, result: snapshot });
+        } else if (toolName === updateCellToolName) {
+          const parsed = updateCellSchema.parse(args ?? {});
+          notebook.setCellText(parsed.id, parsed.text);
+          addToolResult({ toolCallId, result: { success: true } });
+        }
+      } catch (err) {
+        const message = (err as Error)?.message ?? 'Unknown error';
+        addToolResult({
+          toolCallId: toolCall.toolCallId,
+          result: { success: false, error: message },
+        });
+      }
+    },
   });
 
   const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -57,21 +103,67 @@ export function AIChat() {
     }
   }, []);
 
+  const renderedMessages = useMemo(() => {
+    return messages.map((m) => {
+      const roleLabel = m.role === 'user' ? 'You' : 'Assistant';
+
+      const parts = (m as unknown as { parts?: Part[] }).parts;
+      const hasParts = Array.isArray(parts);
+
+      const partElements = hasParts
+        ? parts!.map((p, idx) => {
+            if ((p as { type?: string }).type === 'text') {
+              const tp = p as TextPart;
+              const text = tp.text ?? tp.textDelta ?? '';
+              return (
+                <div key={idx} className="whitespace-pre-wrap">
+                  {text}
+                </div>
+              );
+            }
+            if ((p as { type?: string }).type === 'tool-call') {
+              const tp = p as ToolCallPart;
+              return (
+                <div
+                  key={idx}
+                  className="text-xs rounded px-2 py-1 bg-blue-50 text-blue-800 border border-blue-200"
+                >
+                  Calling {tp.toolName}
+                </div>
+              );
+            }
+            if ((p as { type?: string }).type === 'tool-result') {
+              const tr = p as ToolResultPart;
+              const isError = !!tr.isError;
+              const classes = isError
+                ? 'bg-red-50 text-red-800 border-red-200'
+                : 'bg-green-50 text-green-800 border-green-200';
+              return (
+                <div key={idx} className={`text-xs rounded px-2 py-1 border ${classes}`}>
+                  {isError ? 'Tool failed' : 'Tool success'}
+                </div>
+              );
+            }
+            return null;
+          })
+        : [<div key="fallback">{getMessageText(m)}</div>];
+
+      return (
+        <div
+          key={m.id}
+          className={`text-sm whitespace-pre-wrap leading-relaxed ${m.role === 'user' ? 'text-black' : 'text-black/80'}`}
+        >
+          <div className="font-medium mb-1">{roleLabel}</div>
+          {partElements}
+        </div>
+      );
+    });
+  }, [messages]);
+
   return (
     <div className="w-full max-w-3xl border border-black/[.08] rounded">
       <div className="p-3 flex flex-col gap-2 max-h-64 overflow-y-auto bg-white">
-        {messages.map((m) => (
-          <div
-            key={m.id}
-            className={`text-sm whitespace-pre-wrap leading-relaxed ${
-              m.role === 'user' ? 'text-black' : 'text-black/80'
-            }`}
-          >
-            <div className="font-medium mb-1">{m.role === 'user' ? 'You' : 'Assistant'}</div>
-            {/* Prefer parts; fallback to content for compatibility */}
-            {getMessageText(m)}
-          </div>
-        ))}
+        {renderedMessages}
         <div className="text-xs text-black/50">{isLoading ? 'responding' : 'idle'}</div>
       </div>
       <form

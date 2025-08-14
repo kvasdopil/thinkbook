@@ -2,6 +2,8 @@
 
 import { createGoogleGenerativeAI, type GoogleGenerativeAIProvider } from '@ai-sdk/google';
 import { streamText, type CoreMessage, type LanguageModelV1 } from 'ai';
+import { listCellsSpec, listCellsToolName } from '@/ai-functions/list-cells';
+import { updateCellSpec, updateCellToolName } from '@/ai-functions/update-cell';
 import { SYSTEM_PROMPT } from '@/prompts/system-prompt';
 
 const google: GoogleGenerativeAIProvider = createGoogleGenerativeAI({
@@ -31,7 +33,8 @@ export async function POST(req: Request) {
             message: {
               id: 'msg1',
               role: 'assistant',
-              content: [{ type: 'text', text: 'This is a mock response.' }],
+              // Use parts to match UI that prefers parts-based rendering
+              parts: [{ type: 'text', text: 'This is a mock response.' }],
             },
           };
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(full)}\n\n`));
@@ -57,6 +60,11 @@ export async function POST(req: Request) {
       system: SYSTEM_PROMPT,
       messages,
       maxRetries: 1,
+      maxSteps: 5,
+      tools: {
+        [listCellsToolName]: listCellsSpec,
+        [updateCellToolName]: updateCellSpec,
+      },
     });
 
     return result.toAIStreamResponse();

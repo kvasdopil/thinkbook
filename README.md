@@ -23,6 +23,7 @@
 - 0004.EXECUTION_CANCELLATION — Added Stop button and immediate interruption via SharedArrayBuffer. Main thread sets `Uint8Array(sab)[0] = 2` to signal SIGINT; worker maps `KeyboardInterrupt` to `execution-cancelled`, UI prints "Execution interrupted by user" and re-enables Run. Required COOP/COEP headers added in `next.config.ts`.
 - 0005.CODE_CELL_TOGGLE_AND_STATUS — Added eye toggle to show/hide the code editor (default hidden), display top-level comment when collapsed, and a status button showing idle/running/complete/failed/cancelled with icons and colors. Status button runs or stops on click; smooth collapse/expand animation and accessible labels included. Added Playwright tests.
 - 0006.AI_CHAT — In-page AI chat above the code cell. Multi-line input with Cmd/Ctrl+Enter to send, streaming responses from `/api/chat` using Vercel AI SDK with `gemini-2.5-flash`. Messages render via `parts`, with session-scoped history and status indicator.
+- 0007.AI_FUNCTION_CALLS — AI tools added with Zod schemas and parts-based UI. Tools: `listCells()` returns `[{id,type,text,status,output}]`; `updateCell(id,text)` returns `{success:true}`. Tools registered on server, executed on client with validation, single call balloon before assistant follow-up, with colored statuses (blue/green/red/orange).
 
 # Directory structure
 
