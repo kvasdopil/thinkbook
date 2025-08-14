@@ -7,14 +7,23 @@ import { listCellsSchema, listCellsToolName } from '@/ai-functions/list-cells';
 import { updateCellSchema, updateCellToolName } from '@/ai-functions/update-cell';
 
 type TextPart = { type: 'text'; text?: string; textDelta?: string };
-type ToolCallPart = { type: 'tool-call'; toolCallId: string; toolName: string; args: unknown };
-type ToolResultPart = {
-  type: 'tool-result';
-  toolCallId: string;
-  toolName: string;
-  result: unknown;
-  isError?: boolean;
-};
+type ToolCallPart =
+  | { type: 'tool-call'; toolInvocation: { toolCallId: string; toolName: string; args?: unknown } }
+  | { type: 'tool-call'; toolCallId: string; toolName: string; args?: unknown };
+type ToolResultPart =
+  | {
+      type: 'tool-result';
+      toolInvocation: { toolCallId: string; toolName: string };
+      result: unknown;
+      isError?: boolean;
+    }
+  | {
+      type: 'tool-result';
+      toolCallId: string;
+      toolName: string;
+      result: unknown;
+      isError?: boolean;
+    };
 type Part = TextPart | ToolCallPart | ToolResultPart | { type: string; [key: string]: unknown };
 type MessageWithParts = { parts?: Part[] };
 
@@ -67,31 +76,25 @@ export function AIChat() {
     initialInput: '',
     maxSteps: 5,
     onToolCall: async ({ toolCall }) => {
-      try {
-        const { toolName, args, toolCallId } = toolCall;
-        if (toolName === listCellsToolName) {
-          const parsed = listCellsSchema.parse(args ?? {});
-          void parsed; // no-op, schema ensures structure
-          const snapshot = notebook.getSnapshot().map((c) => ({
-            id: c.id,
-            type: c.type,
-            text: c.text,
-            status: c.status,
-            output: c.output,
-          }));
-          addToolResult({ toolCallId, result: snapshot });
-        } else if (toolName === updateCellToolName) {
-          const parsed = updateCellSchema.parse(args ?? {});
-          notebook.setCellText(parsed.id, parsed.text);
-          addToolResult({ toolCallId, result: { success: true } });
-        }
-      } catch (err) {
-        const message = (err as Error)?.message ?? 'Unknown error';
-        addToolResult({
-          toolCallId: toolCall.toolCallId,
-          result: { success: false, error: message },
-        });
+      const { toolName, args } = toolCall as { toolName: string; args?: unknown };
+      if (toolName === listCellsToolName) {
+        const parsed = listCellsSchema.parse(args ?? {});
+        void parsed;
+        const cells = notebook.getSnapshot().map((c) => ({
+          id: c.id,
+          type: c.type,
+          text: c.text,
+          status: c.status,
+          output: c.output,
+        }));
+        return { cells } as const;
       }
+      if (toolName === updateCellToolName) {
+        const parsed = updateCellSchema.parse(args ?? {});
+        notebook.setCellText(parsed.id, parsed.text);
+        return { success: true } as const;
+      }
+      return undefined;
     },
   });
 
@@ -107,46 +110,51 @@ export function AIChat() {
     return messages.map((m) => {
       const roleLabel = m.role === 'user' ? 'You' : 'Assistant';
 
-      const parts = (m as unknown as { parts?: Part[] }).parts;
+      const msgAny = m as unknown as { parts?: Part[] };
+      const parts = msgAny.parts;
       const hasParts = Array.isArray(parts);
 
-      const partElements = hasParts
-        ? parts!.map((p, idx) => {
-            if ((p as { type?: string }).type === 'text') {
-              const tp = p as TextPart;
-              const text = tp.text ?? tp.textDelta ?? '';
-              return (
-                <div key={idx} className="whitespace-pre-wrap">
-                  {text}
-                </div>
-              );
-            }
-            if ((p as { type?: string }).type === 'tool-call') {
-              const tp = p as ToolCallPart;
-              return (
-                <div
-                  key={idx}
-                  className="text-xs rounded px-2 py-1 bg-blue-50 text-blue-800 border border-blue-200"
-                >
-                  Calling {tp.toolName}
-                </div>
-              );
-            }
-            if ((p as { type?: string }).type === 'tool-result') {
-              const tr = p as ToolResultPart;
-              const isError = !!tr.isError;
-              const classes = isError
-                ? 'bg-red-50 text-red-800 border-red-200'
-                : 'bg-green-50 text-green-800 border-green-200';
-              return (
-                <div key={idx} className={`text-xs rounded px-2 py-1 border ${classes}`}>
-                  {isError ? 'Tool failed' : 'Tool success'}
-                </div>
-              );
-            }
-            return null;
-          })
-        : [<div key="fallback">{getMessageText(m)}</div>];
+      const partElements = (hasParts ? parts! : []).map((p, idx) => {
+        if ((p as { type?: string }).type === 'text') {
+          const tp = p as TextPart;
+          const text = tp.text ?? tp.textDelta ?? '';
+          return (
+            <div key={idx} className="whitespace-pre-wrap">
+              {text}
+            </div>
+          );
+        }
+        if ((p as { type?: string }).type === 'tool-call') {
+          const tp = p as ToolCallPart;
+          const toolName =
+            'toolInvocation' in tp
+              ? tp.toolInvocation.toolName
+              : (tp as { toolName: string }).toolName;
+          return (
+            <div
+              key={idx}
+              className="text-xs rounded px-2 py-1 bg-blue-50 text-blue-800 border border-blue-200"
+            >
+              Calling {toolName}
+            </div>
+          );
+        }
+        if ((p as { type?: string }).type === 'tool-result') {
+          const tr = p as ToolResultPart;
+          const isError = !!tr.isError;
+          const classes = isError
+            ? 'bg-red-50 text-red-800 border-red-200'
+            : 'bg-green-50 text-green-800 border-green-200';
+          return (
+            <div key={idx} className={`text-xs rounded px-2 py-1 border ${classes}`}>
+              {isError ? 'Tool failed' : 'Tool success'}
+            </div>
+          );
+        }
+        return null;
+      });
+
+      const hasAnyParts = partElements.some((el) => el !== null);
 
       return (
         <div
@@ -154,7 +162,7 @@ export function AIChat() {
           className={`text-sm whitespace-pre-wrap leading-relaxed ${m.role === 'user' ? 'text-black' : 'text-black/80'}`}
         >
           <div className="font-medium mb-1">{roleLabel}</div>
-          {partElements}
+          {hasAnyParts ? partElements : <div>{getMessageText(m)}</div>}
         </div>
       );
     });

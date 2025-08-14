@@ -25,6 +25,8 @@ type WorkerMessage =
 
 export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: string) => void }) {
   const notebook = useNotebook();
+  const { registerOrUpdateCell, registerController, setCellOutput, updateCellStatus, setCellText } =
+    notebook;
   const [output, setOutput] = useState<string>('');
   const [isReady, setIsReady] = useState<boolean>(false);
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -35,6 +37,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
   const workerRef = useRef<Worker | null>(null);
   const workerInitOnceRef = useRef<boolean>(false);
   const editorInstanceRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const programmaticEditorUpdateRef = useRef<boolean>(false);
   const interruptSABRef = useRef<SharedArrayBuffer | null>(null);
   const stopRequestedRef = useRef<boolean>(false);
   const cancellationMessageShownRef = useRef<boolean>(false);
@@ -45,27 +48,27 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
   // Register cell in notebook on mount
   useEffect(() => {
     const cellId = 'py-1';
-    notebook.registerOrUpdateCell({
+    registerOrUpdateCell({
       id: cellId,
       type: 'python',
       text: editorCodeRef.current,
       status: 'idle',
       output: [],
     } as NotebookCell);
-    notebook.registerController(cellId, {
+    registerController(cellId, {
       setText: (text: string) => {
         editorCodeRef.current = text;
         const editor = editorInstanceRef.current;
         if (editor && editor.getValue() !== text) {
+          programmaticEditorUpdateRef.current = true;
           editor.setValue(text);
         }
       },
     });
     return () => {
-      notebook.registerController(cellId, null);
+      registerController(cellId, null);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [registerController, registerOrUpdateCell]);
 
   const appendOutput = useCallback((line: string) => {
     setOutput((prev) => prev + line);
@@ -73,9 +76,8 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
 
   useEffect(() => {
     if (onOutputChange) onOutputChange(output);
-    // Sync output to notebook store
-    notebook.setCellOutput('py-1', output.split('\n'));
-  }, [output, onOutputChange, notebook]);
+    setCellOutput('py-1', output.split('\n'));
+  }, [output, onOutputChange, setCellOutput]);
 
   const onMessage = useCallback(
     (event: MessageEvent<WorkerMessage>) => {
@@ -200,10 +202,10 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
     stopRequestedRef.current = false;
     setIsRunning(true);
     setStatus('running');
-    notebook.updateCellStatus('py-1', 'running');
+    updateCellStatus('py-1', 'running');
     setOutput('');
     workerRef.current.postMessage({ type: 'run', code: editorCodeRef.current });
-  }, [isReady, notebook]);
+  }, [isReady, updateCellStatus]);
 
   const stop = useCallback(() => {
     if (!workerRef.current) return;
@@ -223,7 +225,7 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
     appendOutput('Stopping...\n');
     appendOutput('Execution interrupted by user\n');
     setStatus('cancelled');
-    notebook.updateCellStatus('py-1', 'cancelled');
+    updateCellStatus('py-1', 'cancelled');
     // Safety: force terminate and recreate worker if it doesn't acknowledge cancellation quickly
     if (forceStopTimerRef.current) {
       clearTimeout(forceStopTimerRef.current);
@@ -237,14 +239,19 @@ export function PythonRunner({ onOutputChange }: { onOutputChange?: (output: str
       setStatus('cancelled');
       forceStopTimerRef.current = null;
     }, 1000);
-  }, [appendOutput, recreateWorker, notebook]);
+  }, [appendOutput, recreateWorker, updateCellStatus]);
 
   const handleEditorChange = useCallback(
     (value?: string) => {
       editorCodeRef.current = value ?? '';
-      notebook.setCellText('py-1', editorCodeRef.current);
+      if (programmaticEditorUpdateRef.current) {
+        // Prevent feedback loop when we set editor value programmatically
+        programmaticEditorUpdateRef.current = false;
+        return;
+      }
+      setCellText('py-1', editorCodeRef.current);
     },
-    [notebook],
+    [setCellText],
   );
 
   const editor = useMemo(

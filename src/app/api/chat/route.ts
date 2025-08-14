@@ -70,6 +70,7 @@ export async function POST(req: Request) {
     return result.toAIStreamResponse();
   } catch (err) {
     const message = (err as Error)?.message ?? 'Unknown error';
+    console.error(err);
     return new Response(message, { status: 500 });
   }
 }
