@@ -13,6 +13,14 @@
 - User stories are located in /docs/user-stories
 - When creating a new user story put it in a separate file with a next available number.
 - ALWAYS run tests and lint after finishing the task to make sure it is really complete
+- Implemented user stories are tracked in `docs/IMPLEMENTED.md`. ALWAYS update that file after you're done with a user story.
+
+## Implemented stories
+
+- 0001.APP
+- 0002.JUPYTER_ENGINE
+- 0003.STREAMING_OUTPUT — Real-time stdout/stderr streaming from the Pyodide worker with unified `{ type: 'out'|'err', value }` messages; UI appends progressively and preserves error handling.
+- 0004.EXECUTION_CANCELLATION — Added Stop button and immediate interruption via SharedArrayBuffer. Main thread sets `Uint8Array(sab)[0] = 2` to signal SIGINT; worker maps `KeyboardInterrupt` to `execution-cancelled`, UI prints "Execution interrupted by user" and re-enables Run. Required COOP/COEP headers added in `next.config.ts`.
 
 # Directory structure
 
@@ -22,5 +30,3 @@
 - /src/components - react components
 - /src/utils - reusable utility code
 - /src/hooks - react hooks
-
-Implemented user-stories are stored in /docs/IMPLEMENTED.md
