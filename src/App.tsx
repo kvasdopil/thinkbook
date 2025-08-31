@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FiSettings } from 'react-icons/fi';
 import { SettingsModal } from './components/SettingsModal';
+import { AiChat } from './components/AiChat';
 import type { SettingsConfig } from './components/SettingsModal';
 import { storage } from './utils/storage';
 
@@ -56,12 +57,22 @@ function App() {
         </div>
       </header>
 
-      <main className="flex items-center justify-center py-20">
-        <div className="text-center">
+      <main className="max-w-4xl mx-auto py-8 px-4">
+        <div className="text-center mb-8">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">Hello World</h2>
           <p className="text-gray-600">
             Configure your settings to get started
           </p>
+        </div>
+        
+        <AiChat />
+        
+        <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mt-4">
+          <div className="text-sm text-gray-600 mb-2">Code Cell Placeholder</div>
+          <div className="bg-white rounded border p-3 font-mono text-sm">
+            # This is where a code cell would be
+            print("Hello, World!")
+          </div>
         </div>
       </main>
 

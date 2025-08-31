@@ -73,3 +73,55 @@
 - Modal maintains focus trapping and accessibility standards with additional inputs
 - Hostname validation prevents double protocol prefixes
 - Form handles partial configuration states gracefully
+
+## 0004.AI_CHAT
+
+**Status:** ✅ Complete
+
+**Summary:** Implemented AI chat functionality using Vercel AI SDK v5 and Google Generative AI, positioned above code cells with streaming responses.
+
+**Implementation Details:**
+
+- Installed `ai` and `@ai-sdk/google` packages for AI functionality
+- Created `src/prompts/system-prompt.ts` - System prompt configuration for AI assistant
+- Created `src/components/MessageTextPart.tsx` - Component for rendering text parts of messages
+- Created `src/components/ChatMessage.tsx` - Component for displaying individual chat messages with role-based styling
+- Created `src/components/ChatInput.tsx` - Input component with auto-resize textarea and send functionality
+- Created `src/components/AiChat.tsx` - Main AI chat component with streaming text integration
+- Integrated chat interface into `src/App.tsx` positioned above code cell placeholder
+- AI chat supports real-time streaming responses using Google's Gemini 2.5 Flash model
+- Chat history displays user messages (right-aligned, blue) and assistant messages (left-aligned, gray)
+- Auto-scrolling to bottom when new messages are added
+- Input supports Enter to send, Shift+Enter for new lines
+- Graceful error handling for API failures
+- Configuration validation - shows warning when Gemini API key is not configured
+
+**Testing:**
+
+- Comprehensive unit tests for all components (MessageTextPart, ChatMessage, ChatInput, AiChat)
+- Tests cover message rendering, input validation, streaming responses, error handling
+- Playwright integration tests for chat interface interaction and configuration validation
+- All unit tests pass with full coverage of component functionality
+- Tests include mocking of AI SDK and proper async/await patterns
+
+**Files Created/Modified:**
+
+- `src/components/AiChat.tsx` - Main AI chat component
+- `src/components/ChatMessage.tsx` - Individual message display
+- `src/components/MessageTextPart.tsx` - Text part renderer
+- `src/components/ChatInput.tsx` - Chat input with auto-resize
+- `src/prompts/system-prompt.ts` - AI system prompt configuration
+- `src/App.tsx` - Integrated chat above code cell placeholder
+- `package.json` - Added ai and @ai-sdk/google dependencies
+- Test files for all new components with comprehensive coverage
+- `tests/ai-chat.spec.ts` - Playwright integration tests
+
+**Technical Notes:**
+
+- Uses Vercel AI SDK v5 with streaming text capabilities
+- Integrates Google Generative AI with user's API key from settings
+- Maintains chat history in component state with unique message IDs
+- Responsive design with proper message alignment and styling
+- Error boundaries and loading states for better UX
+- Follows existing project patterns for component structure and testing
+- All code passes ESLint and TypeScript compilation checks
