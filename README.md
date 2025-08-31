@@ -19,7 +19,6 @@
 ## Implemented stories
 
 - see /docs/IMPLEMENTED.md
-  - 0011.MARKDOWN: AI outputs render as full Markdown via `react-markdown` with support for tables, lists, and code blocks. Added scoped styles and tests.
 
 # Directory structure
 

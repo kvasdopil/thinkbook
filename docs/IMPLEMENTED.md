@@ -90,3 +90,12 @@
 - Ensured large tables and code blocks scroll horizontally within the output area only
 - Updated mock AI response to include Markdown for testing; added Playwright assertions in `tests/ai-chat.spec.ts`
 - No a11y changes; text-only rendering
+
+## 0012.SNOWFLAKE_SQL_ENDPOINT
+
+- Implemented secure POST endpoint at `src/app/api/snowflake/route.ts`
+- Validates presence of `x-snowflake-access-token` header; returns 400 if missing
+- Accepts either `{ sql: string }` to execute a new statement or `{ handle: string, partition?: number }` to fetch a partition
+- Reads `SNOWFLAKE_BASE_URL` from env and forwards requests; 30s timeout and error propagation
+- Added TypeScript `SnowflakeResult` interface and defensive parsing
+- Added Playwright tests in `tests/snowflake-endpoint.spec.ts` covering success, missing token, missing params, and partition fetch
