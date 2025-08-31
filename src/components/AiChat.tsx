@@ -120,8 +120,8 @@ export function AiChat() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto space-y-6 p-4">
+    <div className="flex flex-col h-full ">
+      <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl align-self-center">
         {messages.map((message, index) => (
           <ChatMessage key={index} message={message} />
         ))}

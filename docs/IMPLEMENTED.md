@@ -125,3 +125,51 @@
 - Error boundaries and loading states for better UX
 - Follows existing project patterns for component structure and testing
 - All code passes ESLint and TypeScript compilation checks
+
+## 0006.MARKDOWN_RENDERING
+
+**Status:** ✅ Complete
+
+**Summary:** Implemented full Markdown rendering for AI outputs using react-markdown with GitHub Flavored Markdown support, replacing plain text rendering.
+
+**Implementation Details:**
+
+- Installed `react-markdown` and `remark-gfm` packages for comprehensive Markdown support
+- Installed `@tailwindcss/typography` plugin for prose styling
+- Updated `src/components/MessageTextPart.tsx` to use ReactMarkdown with custom component renderers
+- Configured custom renderers for tables, code blocks, inline code, and pre elements
+- Added GitHub Flavored Markdown (GFM) plugin for table, strikethrough, and task list support
+- Implemented horizontal scrolling for large tables using overflow-x-auto wrapper
+- Styled code blocks with dark theme (gray-900 background, gray-100 text)
+- Applied Tailwind prose classes for consistent typography without background/borders
+- Tables include proper borders and padding with alternating header background
+- Block code elements use monospace font with proper padding and overflow handling
+- Inline code uses light gray background for distinction from regular text
+
+**Testing:**
+
+- Comprehensive unit tests covering all Markdown features (headings, lists, tables, code)
+- Tests verify table horizontal scrolling container exists and functions
+- Unit tests for inline code vs block code rendering differences
+- Tests confirm prose classes are applied correctly without unwanted backgrounds
+- Playwright integration tests for complete Markdown rendering in chat context
+- All MessageTextPart unit tests pass with full Markdown feature coverage
+
+**Files Created/Modified:**
+
+- `src/components/MessageTextPart.tsx` - Replaced plain text with ReactMarkdown rendering
+- `src/components/MessageTextPart.test.tsx` - Updated tests for Markdown functionality
+- `tests/ai-markdown-rendering.spec.ts` - New Playwright tests for Markdown features
+- `tailwind.config.js` - Added typography plugin for prose styling
+- `package.json` - Added react-markdown, remark-gfm, and @tailwindcss/typography dependencies
+
+**Technical Notes:**
+
+- Uses react-markdown with remarkGfm plugin for full GitHub Flavored Markdown support
+- Custom component renderers ensure proper HTML structure and styling
+- Tables wrapped in overflow-x-auto containers for horizontal scrolling on mobile
+- Code blocks use block-level styling instead of pre elements to avoid HTML validation issues
+- Prose classes applied with max-w-none for full width rendering as specified
+- No backgrounds or borders on container elements, matching conversation UI design
+- All Markdown features supported: headings, lists, tables, code blocks, links, emphasis
+- TypeScript compilation and ESLint checks pass without errors
