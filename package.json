@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint . && tsc --noEmit",
+    "lint": "eslint . && tsc -b --noEmit",
     "format": "prettier --write .",
     "test": "playwright test --reporter=list -x",
     "test:unit": "vitest",

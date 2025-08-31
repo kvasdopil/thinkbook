@@ -42,10 +42,10 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <h1 className="text-xl font-semibold text-gray-900">TB2 Notebook</h1>
+    <div className="flex flex-col h-screen bg-gray-50 font-sans">
+      <header className="border-b border-gray-200 bg-white p-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <h1 className="text-2xl font-bold outline-none">AI Chat Assistant</h1>
           <button
             onClick={handleSettingsClick}
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -57,22 +57,9 @@ function App() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto py-8 px-4">
-        <div className="text-center mb-8">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Hello World</h2>
-          <p className="text-gray-600">
-            Configure your settings to get started
-          </p>
-        </div>
-        
-        <AiChat />
-        
-        <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mt-4">
-          <div className="text-sm text-gray-600 mb-2">Code Cell Placeholder</div>
-          <div className="bg-white rounded border p-3 font-mono text-sm">
-            # This is where a code cell would be
-            print("Hello, World!")
-          </div>
+      <main className="flex-1 overflow-y-auto flex flex-col">
+        <div className="flex-1 flex flex-col">
+          <AiChat />
         </div>
       </main>
 
