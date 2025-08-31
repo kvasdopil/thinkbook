@@ -20,7 +20,6 @@ This document outlines the end-to-end architecture of the Thinkbook application:
 ### Data Model
 
 - NotebookFile
-
   - id: string (uuid)
   - createdAt: ISO string
   - updatedAt: ISO string (changes on meaningful edits only)
@@ -29,7 +28,6 @@ This document outlines the end-to-end architecture of the Thinkbook application:
   - messages: MessagePart[] (Vercel AI SDK message parts; render parts, not content)
 
 - Cell
-
   - id: string
   - type: "code" | "markdown" (initial scope: code)
   - text: string (source code)
@@ -142,7 +140,6 @@ This document outlines the end-to-end architecture of the Thinkbook application:
 ### Testing Strategy
 
 - Unit tests (Vitest):
-
   - Storage helpers and settings hooks.
   - SnowflakeService request building, validation, and error propagation.
   - AI tools parameter validation and reducer logic for item insertion/linking.
