@@ -1,4 +1,4 @@
-You are preparing a new user-story document for the Next.js notebook application.
+You are preparing a new user-story document for the application.
 
 Follow **exactly** the Markdown layout shown below. Replace every {{placeholder}} with concrete information. Do **not** omit or rename sections. Keep headings (`##`) and list markers (`-`, `1.`) intact so automated tooling can parse the file.
 
