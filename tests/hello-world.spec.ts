@@ -7,10 +7,13 @@ test('displays Hello World message', async ({ page }) => {
 
   await page.goto('/');
 
+  // Verify the app header is displayed
+  await expect(page.locator('header h1')).toContainText('TB2 Notebook');
+
   // Verify the Hello World message is displayed
-  await expect(page.locator('h1')).toContainText('Hello World');
+  await expect(page.locator('main h2')).toContainText('Hello World');
 
   // Verify the page structure
-  await expect(page.locator('h1')).toHaveClass(/text-4xl/);
+  await expect(page.locator('main h2')).toHaveClass(/text-4xl/);
   await expect(page.locator('div.min-h-screen')).toBeVisible();
 });
