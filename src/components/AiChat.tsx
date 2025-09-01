@@ -37,7 +37,7 @@ export function AiChat({ currentNotebook }: AiChatProps) {
 
   if (!hasApiKey) {
     return (
-      <div className="flex flex-col h-full p-4">
+      <div className="flex flex-col h-full p-4 flex-1 overflow-hidden">
         <div className="flex-1 overflow-y-auto space-y-6">
           <div className="flex justify-end">
             <div className="bg-primary-600 text-white rounded-lg p-4 max-w-3xl">
@@ -61,7 +61,7 @@ export function AiChat({ currentNotebook }: AiChatProps) {
   }
 
   return (
-    <div className="flex flex-col h-full items-center">
+    <div className="flex flex-col h-full items-center flex-1 overflow-hidden">
       <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl">
         {messages.map((message, index) => (
           <ChatMessage
