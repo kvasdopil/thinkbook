@@ -81,7 +81,9 @@ describe('ChatMessage', () => {
 
     render(<ChatMessage message={message} {...mockProps} />);
 
-    const messageElement = screen.getByText('User message').closest('div.cursor-pointer');
+    const messageElement = screen
+      .getByText('User message')
+      .closest('div.cursor-pointer');
     await userEvent.click(messageElement!);
 
     expect(mockProps.onStartEdit).toHaveBeenCalledWith('msg-1');

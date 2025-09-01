@@ -13,7 +13,9 @@ test.describe('Message Editing Feature', () => {
     await page.goto('/');
   });
 
-  test('user messages should be clickable with hover effect', async ({ page }) => {
+  test('user messages should be clickable with hover effect', async ({
+    page,
+  }) => {
     // First, we need to configure API key and send a message
     await page.getByRole('button', { name: 'Settings' }).click();
     await page.fill('[data-testid="gemini-api-key-input"]', 'test-api-key');
@@ -25,10 +27,14 @@ test.describe('Message Editing Feature', () => {
     await input.press('Enter');
 
     // Wait for the message to appear
-    await expect(page.getByText('Hello, this is my first message')).toBeVisible();
+    await expect(
+      page.getByText('Hello, this is my first message'),
+    ).toBeVisible();
 
     // Check that user message has pointer cursor and hover effect
-    const userMessage = page.getByText('Hello, this is my first message').locator('..');
+    const userMessage = page
+      .getByText('Hello, this is my first message')
+      .locator('..');
     await expect(userMessage).toHaveClass(/cursor-pointer/);
 
     // Test hover effect by hovering over the message
@@ -53,12 +59,20 @@ test.describe('Message Editing Feature', () => {
     await userMessage.click();
 
     // Verify edit mode UI appears
-    await expect(page.locator('textarea[placeholder="Edit your message..."]')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Send edited message' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Cancel editing' })).toBeVisible();
+    await expect(
+      page.locator('textarea[placeholder="Edit your message..."]'),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Send edited message' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Cancel editing' }),
+    ).toBeVisible();
 
     // Verify textarea contains original text
-    const textarea = page.locator('textarea[placeholder="Edit your message..."]');
+    const textarea = page.locator(
+      'textarea[placeholder="Edit your message..."]',
+    );
     await expect(textarea).toHaveValue('Original message text');
   });
 
@@ -70,7 +84,7 @@ test.describe('Message Editing Feature', () => {
 
     // Send multiple messages to create a conversation
     const input = page.locator('[placeholder="Ask the AI assistant..."]');
-    
+
     await input.fill('First message');
     await input.press('Enter');
     await expect(page.getByText('First message')).toBeVisible();
@@ -108,13 +122,17 @@ test.describe('Message Editing Feature', () => {
     await userMessage.click();
 
     // Verify edit mode is active
-    await expect(page.locator('textarea[placeholder="Edit your message..."]')).toBeVisible();
+    await expect(
+      page.locator('textarea[placeholder="Edit your message..."]'),
+    ).toBeVisible();
 
     // Press ESC to cancel
     await page.keyboard.press('Escape');
 
     // Verify edit mode is cancelled
-    await expect(page.locator('textarea[placeholder="Edit your message..."]')).not.toBeVisible();
+    await expect(
+      page.locator('textarea[placeholder="Edit your message..."]'),
+    ).not.toBeVisible();
     await expect(page.getByText('Test message')).toBeVisible();
   });
 
@@ -138,7 +156,9 @@ test.describe('Message Editing Feature', () => {
     await page.getByRole('button', { name: 'Cancel editing' }).click();
 
     // Verify edit mode is cancelled
-    await expect(page.locator('textarea[placeholder="Edit your message..."]')).not.toBeVisible();
+    await expect(
+      page.locator('textarea[placeholder="Edit your message..."]'),
+    ).not.toBeVisible();
     await expect(page.getByText('Test message for cancel')).toBeVisible();
   });
 
@@ -155,26 +175,38 @@ test.describe('Message Editing Feature', () => {
     await expect(page.getByText('Keyboard navigation test')).toBeVisible();
 
     // Enter edit mode
-    const userMessage = page.getByText('Keyboard navigation test').locator('..');
+    const userMessage = page
+      .getByText('Keyboard navigation test')
+      .locator('..');
     await userMessage.click();
 
-    const textarea = page.locator('textarea[placeholder="Edit your message..."]');
+    const textarea = page.locator(
+      'textarea[placeholder="Edit your message..."]',
+    );
     await expect(textarea).toBeFocused();
 
     // Tab should focus Send button
     await page.keyboard.press('Tab');
-    await expect(page.getByRole('button', { name: 'Send edited message' })).toBeFocused();
+    await expect(
+      page.getByRole('button', { name: 'Send edited message' }),
+    ).toBeFocused();
 
     // Tab should focus Cancel button
     await page.keyboard.press('Tab');
-    await expect(page.getByRole('button', { name: 'Cancel editing' })).toBeFocused();
+    await expect(
+      page.getByRole('button', { name: 'Cancel editing' }),
+    ).toBeFocused();
 
     // Shift+Tab should go back to Send button
     await page.keyboard.press('Shift+Tab');
-    await expect(page.getByRole('button', { name: 'Send edited message' })).toBeFocused();
+    await expect(
+      page.getByRole('button', { name: 'Send edited message' }),
+    ).toBeFocused();
   });
 
-  test('clicking outside edit area should cancel edit mode', async ({ page }) => {
+  test('clicking outside edit area should cancel edit mode', async ({
+    page,
+  }) => {
     // Configure API key and send message
     await page.getByRole('button', { name: 'Settings' }).click();
     await page.fill('[data-testid="gemini-api-key-input"]', 'test-api-key');
@@ -191,30 +223,36 @@ test.describe('Message Editing Feature', () => {
     await userMessage.click();
 
     // Verify edit mode is active
-    await expect(page.locator('textarea[placeholder="Edit your message..."]')).toBeVisible();
+    await expect(
+      page.locator('textarea[placeholder="Edit your message..."]'),
+    ).toBeVisible();
 
     // Click outside the edit area (click on the main content area but not on edit components)
     await page.click('body', { position: { x: 50, y: 50 } });
 
     // Verify edit mode is cancelled
-    await expect(page.locator('textarea[placeholder="Edit your message..."]')).not.toBeVisible();
+    await expect(
+      page.locator('textarea[placeholder="Edit your message..."]'),
+    ).not.toBeVisible();
     await expect(page.getByText('Outside click test')).toBeVisible();
   });
 
-  test('send button should rollback conversation and continue from edited point', async ({ page }) => {
+  test('send button should rollback conversation and continue from edited point', async ({
+    page,
+  }) => {
     // Configure API key
     await page.getByRole('button', { name: 'Settings' }).click();
     await page.fill('[data-testid="gemini-api-key-input"]', 'test-api-key');
     await page.getByRole('button', { name: 'Close' }).click();
 
     const input = page.locator('[placeholder="Ask the AI assistant..."]');
-    
+
     // Send first message
     await input.fill('First user message');
     await input.press('Enter');
     await expect(page.getByText('First user message')).toBeVisible();
-    
-    // Wait a bit and send second message  
+
+    // Wait a bit and send second message
     await page.waitForTimeout(500);
     await input.fill('Second user message');
     await input.press('Enter');
@@ -225,7 +263,9 @@ test.describe('Message Editing Feature', () => {
     await firstMessage.click();
 
     // Verify edit mode is active
-    const textarea = page.locator('textarea[placeholder="Edit your message..."]');
+    const textarea = page.locator(
+      'textarea[placeholder="Edit your message..."]',
+    );
     await expect(textarea).toBeVisible();
 
     // Edit the message
@@ -237,10 +277,10 @@ test.describe('Message Editing Feature', () => {
 
     // Verify the edited message appears
     await expect(page.getByText('Edited first message')).toBeVisible();
-    
+
     // Verify the second message is no longer visible (rolled back)
     await expect(page.getByText('Second user message')).not.toBeVisible();
-    
+
     // Verify edit mode is no longer active
     await expect(textarea).not.toBeVisible();
   });

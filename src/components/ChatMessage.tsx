@@ -1,7 +1,4 @@
-import {
-  isToolOrDynamicToolUIPart,
-  getToolOrDynamicToolName,
-} from 'ai';
+import { isToolOrDynamicToolUIPart, getToolOrDynamicToolName } from 'ai';
 import { useState, useRef, useEffect } from 'react';
 import { FaPaperPlane, FaTimes } from 'react-icons/fa';
 import { MessageTextPart } from './MessageTextPart';
@@ -18,20 +15,23 @@ interface ChatMessageProps {
   onSendEdit: (messageId: string, newText: string) => void;
 }
 
-export function ChatMessage({ 
-  message, 
-  messageIndex, 
+export function ChatMessage({
+  message,
+  messageIndex,
   editingMessageIndex,
-  onStartEdit, 
-  onCancelEdit, 
-  onSendEdit 
+  onStartEdit,
+  onCancelEdit,
+  onSendEdit,
 }: ChatMessageProps) {
   const isUser = message.role === 'user';
   const { editingMessageId } = useEditStore();
   const [editText, setEditText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isEditing = editingMessageId === message.id;
-  const isAfterEditingMessage = editingMessageId && editingMessageIndex !== -1 && messageIndex > editingMessageIndex;
+  const isAfterEditingMessage =
+    editingMessageId &&
+    editingMessageIndex !== -1 &&
+    messageIndex > editingMessageIndex;
 
   // Initialize edit text when entering edit mode
   useEffect(() => {
@@ -55,9 +55,14 @@ export function ChatMessage({
         onCancelEdit();
       }
       // Handle Tab navigation within edit mode
-      if (e.key === 'Tab' && textareaRef.current?.contains(document.activeElement as Node)) {
+      if (
+        e.key === 'Tab' &&
+        textareaRef.current?.contains(document.activeElement as Node)
+      ) {
         e.preventDefault();
-        const sendButton = textareaRef.current?.parentElement?.querySelector('[data-send-button]') as HTMLElement;
+        const sendButton = textareaRef.current?.parentElement?.querySelector(
+          '[data-send-button]',
+        ) as HTMLElement;
         sendButton?.focus();
       }
     };
@@ -117,7 +122,9 @@ export function ChatMessage({
       .join('');
 
     return (
-      <div className={`flex justify-end ${isAfterEditingMessage ? 'opacity-70' : ''}`}>
+      <div
+        className={`flex justify-end ${isAfterEditingMessage ? 'opacity-70' : ''}`}
+      >
         {isEditing ? (
           <div className="bg-blue-600 text-white rounded-lg p-4 max-w-3xl">
             <textarea
@@ -138,7 +145,8 @@ export function ChatMessage({
                   }
                   if (e.key === 'Tab') {
                     e.preventDefault();
-                    const cancelButton = e.currentTarget.nextElementSibling as HTMLElement;
+                    const cancelButton = e.currentTarget
+                      .nextElementSibling as HTMLElement;
                     cancelButton?.focus();
                   }
                 }}
@@ -159,7 +167,8 @@ export function ChatMessage({
                   }
                   if (e.key === 'Tab' && e.shiftKey) {
                     e.preventDefault();
-                    const sendButton = e.currentTarget.previousElementSibling as HTMLElement;
+                    const sendButton = e.currentTarget
+                      .previousElementSibling as HTMLElement;
                     sendButton?.focus();
                   }
                   if (e.key === 'Tab' && !e.shiftKey) {
@@ -178,7 +187,7 @@ export function ChatMessage({
             </div>
           </div>
         ) : (
-          <div 
+          <div
             className="bg-blue-600 text-white rounded-lg px-2 py-1 max-w-3xl cursor-pointer hover:bg-blue-700 transition-colors"
             onClick={handleUserMessageClick}
           >
@@ -196,9 +205,12 @@ export function ChatMessage({
     .join('');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const toolParts = (message.originalMessage as any)?.parts ? 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ((message.originalMessage as any).parts as any[]).filter(isToolOrDynamicToolUIPart) : [];
+  const toolParts = (message.originalMessage as any)?.parts
+    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((message.originalMessage as any).parts as any[]).filter(
+        isToolOrDynamicToolUIPart,
+      )
+    : [];
 
   return (
     <div className={`${isAfterEditingMessage ? 'opacity-70' : ''}`}>

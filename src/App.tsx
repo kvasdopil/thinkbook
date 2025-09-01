@@ -2,11 +2,18 @@ import { useState, useEffect } from 'react';
 import { FiSettings } from 'react-icons/fi';
 import { SettingsModal } from './components/SettingsModal';
 import { AiChat } from './components/AiChat';
+import { NotebookFilePanel } from './components/NotebookFilePanel';
+import { useNotebookFiles } from './hooks/useNotebookFiles';
 import type { SettingsConfig } from './components/SettingsModal';
+import type { NotebookFile } from './types/notebook';
 import { storage } from './utils/storage';
 
 function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [currentNotebook, setCurrentNotebook] = useState<NotebookFile | null>(
+    null,
+  );
+  const { activeFile } = useNotebookFiles();
 
   useEffect(() => {
     const checkInitialConfig = async () => {
@@ -18,6 +25,25 @@ function App() {
 
     checkInitialConfig();
   }, []);
+
+  // Auto-open last active file on page load and sync with activeFile changes
+  useEffect(() => {
+    if (
+      activeFile &&
+      (!currentNotebook || currentNotebook.id !== activeFile.id)
+    ) {
+      setCurrentNotebook(activeFile);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFile?.id, currentNotebook?.id]); // Only depend on IDs, not full objects
+
+  const handleFileSelect = (file: NotebookFile) => {
+    setCurrentNotebook(file);
+  };
+
+  const handleNewFile = (file: NotebookFile) => {
+    setCurrentNotebook(file);
+  };
 
   const handleSettingsClick = () => {
     setIsSettingsOpen(true);
@@ -57,9 +83,13 @@ function App() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto flex flex-col">
+      <main className="flex-1 flex overflow-hidden">
+        <NotebookFilePanel
+          onFileSelect={handleFileSelect}
+          onNewFile={handleNewFile}
+        />
         <div className="flex-1 flex flex-col">
-          <AiChat />
+          <AiChat currentNotebook={currentNotebook} />
         </div>
       </main>
 

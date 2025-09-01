@@ -1,9 +1,11 @@
 import localforage from 'localforage';
+import type { NotebookFilesStore } from '../types/notebook';
 
 const STORAGE_KEYS = {
   GEMINI_API_KEY: 'gemini-api-key',
   SNOWFLAKE_ACCESS_TOKEN: 'snowflake-access-token',
   SNOWFLAKE_HOSTNAME: 'snowflake-hostname',
+  NOTEBOOK_FILES: 'notebookFiles',
 } as const;
 
 export const storage = {
@@ -39,5 +41,16 @@ export const storage = {
     ]);
 
     return !!(geminiKey && snowflakeToken && snowflakeHostname);
+  },
+
+  async getNotebookFiles(): Promise<NotebookFilesStore> {
+    const stored = await localforage.getItem<NotebookFilesStore>(
+      STORAGE_KEYS.NOTEBOOK_FILES,
+    );
+    return stored || { files: {}, lastActiveFileId: null };
+  },
+
+  async setNotebookFiles(store: NotebookFilesStore): Promise<void> {
+    await localforage.setItem(STORAGE_KEYS.NOTEBOOK_FILES, store);
   },
 };

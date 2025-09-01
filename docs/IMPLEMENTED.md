@@ -207,7 +207,7 @@
 **Files Created/Modified:**
 
 - `src/store/editStore.ts` - New Zustand store for editing state
-- `src/hooks/useEditableChat.ts` - New hook extending useAiChat with editing capabilities  
+- `src/hooks/useEditableChat.ts` - New hook extending useAiChat with editing capabilities
 - `src/components/ChatMessage.tsx` - Added editing functionality and updated interface
 - `src/components/AiChat.tsx` - Integrated editable chat hook and updated message rendering
 - `src/components/ChatMessage.test.tsx` - Updated tests for new interface and editing features
@@ -227,3 +227,65 @@
 - Maintains existing code patterns and architectural principles
 - Full compatibility with react-icons (FaPaperPlane, FaTimes) as specified
 - ESLint and TypeScript compilation pass without errors
+
+## 0009.NOTEBOOK_FILE_PANEL
+
+**Status:** ✅ Complete
+
+**Summary:** Implemented a comprehensive notebook file management system with a left sidebar panel that allows users to manage multiple notebook files, automatically persisting notebook state (cells + AI conversations) and supporting file switching with preserved context.
+
+**Implementation Details:**
+
+- Created `src/types/notebook.ts` - TypeScript interfaces for `NotebookFile` and `NotebookFilesStore` with exact specification structure
+- Created `src/hooks/useNotebookFiles.ts` - Main file management hook using Zustand store with CRUD operations, debounced storage saves, and automatic title generation
+- Created `src/hooks/useNotebookChat.ts` - Bridge hook connecting notebook files with existing AI chat functionality while preserving message history
+- Created `src/components/NotebookFilePanel.tsx` - Left sidebar component with file grouping by date (Today/Yesterday/older), hover delete functionality, and empty state
+- Extended `src/utils/storage.ts` - Added `notebookFiles` storage methods using localforage with proper typing and error handling
+- Updated `src/App.tsx` - Integrated file panel with minimal layout changes, auto-opens last active file on page reload
+- Left sidebar displays files grouped by date with "Today", "Yesterday", and formatted older dates using `date-fns`
+- Each file shows auto-generated title (from first cell markdown header or code snippet), last modified timestamp, and highlighting for active file
+- New File button (FaPlus icon) creates fresh notebooks and immediately opens them as active
+- File deletion with confirmation dialog and trash icon (FaTrash) on hover
+- `updatedAt` timestamp only updates when messages are added, cells modified, or cells deleted (not on execution)
+- Auto-generated titles from markdown headers (e.g., "# My Analysis" → "My Analysis") or truncated code snippets
+- Debounced storage writes (500ms) to prevent excessive localforage operations during active editing
+- Auto-reopens last active notebook file on page reload with proper state restoration
+
+**Testing:**
+
+- Comprehensive unit tests for `useNotebookFiles.ts` covering all CRUD operations, date grouping, and storage integration
+- Unit tests for `NotebookFilePanel.tsx` testing file rendering, interactions, delete confirmation, and empty states
+- Playwright integration tests covering complete user workflows: file creation, switching, deletion, persistence across reloads
+- Tests verify date grouping logic, title generation, active file highlighting, and storage persistence
+- Mock implementations for date-fns functions and storage layer with proper cleanup
+- All tests include proper accessibility checks and keyboard navigation support
+
+**Files Created/Modified:**
+
+- `src/types/notebook.ts` - New TypeScript interfaces for notebook data structures
+- `src/hooks/useNotebookFiles.ts` - Main file management hook with Zustand store
+- `src/hooks/useNotebookChat.ts` - Integration hook connecting files with AI chat
+- `src/components/NotebookFilePanel.tsx` - Left sidebar file management UI
+- `src/utils/storage.ts` - Extended with notebook file persistence methods
+- `src/App.tsx` - Integrated file panel with minimal layout changes and auto-reopen logic
+- `src/hooks/useNotebookFiles.test.ts` - Comprehensive unit tests for file operations
+- `src/components/NotebookFilePanel.test.tsx` - Unit tests for UI component behavior
+- `tests/notebook-file-panel.spec.ts` - Playwright integration tests for complete workflows
+- `package.json` - Added `date-fns` dependency for date formatting and grouping
+
+**Technical Notes:**
+
+- Uses Zustand for complex state management as per project guidelines
+- Integrates with existing AI chat system without disrupting current functionality
+- Date grouping uses `isToday`, `isYesterday`, and `format` from `date-fns` for proper localization
+- Storage layer properly extends existing patterns with `notebookFiles` key in localforage
+- Unique ID generation using timestamp + random string for reliable file identification
+- Auto-title generation prioritizes markdown headers over code snippets with intelligent truncation
+- Debounced storage prevents performance issues during rapid state changes
+- Memory leak prevention with proper cleanup of timers and event listeners
+- Full keyboard navigation support and accessibility compliance with ARIA labels
+- Responsive design with fixed 320px (w-80) sidebar width and proper overflow handling
+- Uses project-standard react-icons (FaPlus, FaFile, FaTrash) for consistent iconography
+- maintains existing chat editing functionality through careful hook composition
+- Type-safe throughout with minimal use of `unknown` for complex AI SDK types
+- Follows established architectural patterns for hooks, components, and storage utilities

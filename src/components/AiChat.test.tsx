@@ -91,7 +91,7 @@ describe('AiChat', () => {
           role: 'user',
           parts: [{ type: 'text', text: 'Test message' }],
           originalMessage: {},
-        }
+        },
       ],
       isLoading: false,
       error: null,
@@ -122,7 +122,7 @@ describe('AiChat', () => {
           role: 'assistant',
           parts: [{ type: 'text', text: 'Hello there!' }],
           originalMessage: {},
-        }
+        },
       ],
       isLoading: false,
       error: null,
@@ -147,7 +147,7 @@ describe('AiChat', () => {
           role: 'user',
           parts: [{ type: 'text', text: 'Test message' }],
           originalMessage: {},
-        }
+        },
       ],
       isLoading: true,
       error: null,
@@ -172,7 +172,7 @@ describe('AiChat', () => {
           role: 'user',
           parts: [{ type: 'text', text: 'Test message' }],
           originalMessage: {},
-        }
+        },
       ],
       isLoading: false,
       error: 'API Error',

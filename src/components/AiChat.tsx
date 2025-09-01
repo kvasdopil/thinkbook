@@ -1,20 +1,25 @@
 import { useEffect, useRef } from 'react';
-import { useEditableChat } from '../hooks/useEditableChat';
+import { useNotebookChat } from '../hooks/useNotebookChat';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
+import type { NotebookFile } from '../types/notebook';
 
-export function AiChat() {
-  const { 
-    messages, 
-    isLoading, 
-    error, 
-    hasApiKey, 
-    sendMessage, 
-    startEditing, 
-    cancelEditing, 
+interface AiChatProps {
+  currentNotebook?: NotebookFile | null;
+}
+
+export function AiChat({ currentNotebook }: AiChatProps) {
+  const {
+    messages,
+    isLoading,
+    error,
+    hasApiKey,
+    sendMessage,
+    startEditing,
+    cancelEditing,
     rollbackAndEdit,
-    editingMessageId 
-  } = useEditableChat();
+    editingMessageId,
+  } = useNotebookChat({ currentNotebook });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -22,8 +27,8 @@ export function AiChat() {
   };
 
   // Find the index of the message being edited
-  const editingMessageIndex = editingMessageId 
-    ? messages.findIndex(msg => msg.id === editingMessageId)
+  const editingMessageIndex = editingMessageId
+    ? messages.findIndex((msg) => msg.id === editingMessageId)
     : -1;
 
   useEffect(() => {
@@ -59,9 +64,9 @@ export function AiChat() {
     <div className="flex flex-col h-full items-center">
       <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl">
         {messages.map((message, index) => (
-          <ChatMessage 
-            key={message.id} 
-            message={message} 
+          <ChatMessage
+            key={message.id}
+            message={message}
             messageIndex={index}
             editingMessageIndex={editingMessageIndex}
             onStartEdit={startEditing}

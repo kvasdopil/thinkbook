@@ -15,7 +15,7 @@ describe('editStore', () => {
   it('should set editingMessageId', () => {
     const { setEditingMessageId } = useEditStore.getState();
     setEditingMessageId('test-message-id');
-    
+
     const { editingMessageId } = useEditStore.getState();
     expect(editingMessageId).toBe('test-message-id');
   });
@@ -24,7 +24,7 @@ describe('editStore', () => {
     const { setEditingMessageId } = useEditStore.getState();
     setEditingMessageId('test-message-id');
     setEditingMessageId(null);
-    
+
     const { editingMessageId } = useEditStore.getState();
     expect(editingMessageId).toBe(null);
   });
