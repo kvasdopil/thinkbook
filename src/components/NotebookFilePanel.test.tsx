@@ -93,8 +93,9 @@ describe('NotebookFilePanel', () => {
   it('highlights the active file', () => {
     render(<NotebookFilePanel />);
 
-    const activeFile = screen.getByText('Test Notebook 1').closest('div');
-    const inactiveFile = screen.getByText('Test Notebook 2').closest('div');
+    // Find the parent container that holds the CSS classes
+    const activeFile = screen.getByText('Test Notebook 1').closest('.border');
+    const inactiveFile = screen.getByText('Test Notebook 2').closest('.border');
 
     expect(activeFile).toHaveClass('bg-blue-50', 'border-blue-200');
     expect(inactiveFile).toHaveClass('bg-white', 'border-gray-200');

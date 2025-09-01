@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FaPlus, FaFile, FaTrash } from 'react-icons/fa';
 import { formatDistanceToNow } from 'date-fns';
 import { useNotebookFiles } from '../hooks/useNotebookFiles';
+import { useUiStore } from '../store/uiStore';
 import type { NotebookFile } from '../types/notebook';
 
 interface NotebookFilePanelProps {
@@ -124,6 +125,7 @@ export const NotebookFilePanel = ({
     deleteFile,
     setActiveFile,
   } = useNotebookFiles();
+  const { isNotebookPanelCollapsed } = useUiStore();
 
   const handleNewFile = () => {
     const newFile = createFile();
@@ -141,7 +143,7 @@ export const NotebookFilePanel = ({
 
   if (isLoading) {
     return (
-      <div className="w-80 bg-white border-r border-gray-200 p-4">
+      <div className={`${isNotebookPanelCollapsed ? 'w-0' : 'w-80'} bg-white border-r border-gray-200 p-4 transition-all duration-300 overflow-hidden`}>
         <div className="animate-pulse" data-testid="loading-skeleton">
           <div className="h-10 bg-gray-200 rounded mb-4"></div>
           <div className="space-y-3">
@@ -157,7 +159,7 @@ export const NotebookFilePanel = ({
   const hasFiles = Object.keys(groupedFiles).length > 0;
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
+    <div className={`${isNotebookPanelCollapsed ? 'w-0' : 'w-80'} bg-white border-r border-gray-200 flex flex-col h-full transition-all duration-300 overflow-hidden`}>
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">

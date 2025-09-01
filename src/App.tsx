@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { FiSettings } from 'react-icons/fi';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { SettingsModal } from './components/SettingsModal';
 import { AiChat } from './components/AiChat';
 import { NotebookFilePanel } from './components/NotebookFilePanel';
 import { useNotebookFiles } from './hooks/useNotebookFiles';
+import { useUiStore } from './store/uiStore';
 import type { SettingsConfig } from './components/SettingsModal';
 import type { NotebookFile } from './types/notebook';
 import { storage } from './utils/storage';
@@ -14,6 +16,7 @@ function App() {
     null,
   );
   const { activeFile } = useNotebookFiles();
+  const { isNotebookPanelCollapsed, toggleNotebookPanel } = useUiStore();
 
   useEffect(() => {
     const checkInitialConfig = async () => {
@@ -71,7 +74,21 @@ function App() {
     <div className="flex flex-col h-screen bg-gray-50 font-sans">
       <header className="border-b border-gray-200 bg-white p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold outline-none">AI Chat Assistant</h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleNotebookPanel}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label={isNotebookPanelCollapsed ? "Show notebook panel" : "Hide notebook panel"}
+              title={isNotebookPanelCollapsed ? "Show notebook panel" : "Hide notebook panel"}
+            >
+              {isNotebookPanelCollapsed ? (
+                <FaChevronRight className="w-4 h-4" />
+              ) : (
+                <FaChevronLeft className="w-4 h-4" />
+              )}
+            </button>
+            <h1 className="text-2xl font-bold outline-none">AI Chat Assistant</h1>
+          </div>
           <button
             onClick={handleSettingsClick}
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
