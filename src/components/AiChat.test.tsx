@@ -29,6 +29,7 @@ describe('AiChat', () => {
       cancelEditing: vi.fn(),
       rollbackAndEdit: vi.fn(),
       editingMessageId: null,
+      setMessages: vi.fn(),
     });
 
     render(<AiChat />);
@@ -51,6 +52,7 @@ describe('AiChat', () => {
       cancelEditing: vi.fn(),
       rollbackAndEdit: vi.fn(),
       editingMessageId: null,
+      setMessages: vi.fn(),
     });
 
     render(<AiChat />);
@@ -71,6 +73,7 @@ describe('AiChat', () => {
       cancelEditing: vi.fn(),
       rollbackAndEdit: vi.fn(),
       editingMessageId: null,
+      setMessages: vi.fn(),
     });
 
     render(<AiChat />);
@@ -101,6 +104,7 @@ describe('AiChat', () => {
       cancelEditing: vi.fn(),
       rollbackAndEdit: vi.fn(),
       editingMessageId: null,
+      setMessages: vi.fn(),
     });
 
     render(<AiChat />);
@@ -132,6 +136,7 @@ describe('AiChat', () => {
       cancelEditing: vi.fn(),
       rollbackAndEdit: vi.fn(),
       editingMessageId: null,
+      setMessages: vi.fn(),
     });
 
     render(<AiChat />);
@@ -157,6 +162,7 @@ describe('AiChat', () => {
       cancelEditing: vi.fn(),
       rollbackAndEdit: vi.fn(),
       editingMessageId: null,
+      setMessages: vi.fn(),
     });
 
     render(<AiChat />);
@@ -182,6 +188,7 @@ describe('AiChat', () => {
       cancelEditing: vi.fn(),
       rollbackAndEdit: vi.fn(),
       editingMessageId: null,
+      setMessages: vi.fn(),
     });
 
     render(<AiChat />);
