@@ -24,16 +24,16 @@ export function useNotebookChat({ currentNotebook }: UseNotebookChatProps) {
     if (currentNotebookIdRef.current !== newNotebookId) {
       setIsLoadingNotebook(true);
       currentNotebookIdRef.current = newNotebookId;
-      
+
       // Clear any existing transition timeout
       if (transitionTimeoutRef.current) {
         clearTimeout(transitionTimeoutRef.current);
       }
-      
+
       // Always clear messages first to prevent cross-contamination
       chat.setMessages([]);
       lastSavedMessagesRef.current = '';
-      
+
       // Use a longer delay to ensure the clear operation completes
       transitionTimeoutRef.current = setTimeout(() => {
         if (currentNotebook) {
@@ -52,12 +52,12 @@ export function useNotebookChat({ currentNotebook }: UseNotebookChatProps) {
           // Reset the ref for this new notebook
           lastSavedMessagesRef.current = JSON.stringify(convertedMessages);
         }
-        
+
         setIsLoadingNotebook(false);
         transitionTimeoutRef.current = null;
       }, 10); // Slightly longer delay to ensure state updates
     }
-    
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentNotebook?.id, chat.setMessages]); // Only react to notebook ID changes
 

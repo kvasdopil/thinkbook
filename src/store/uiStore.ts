@@ -20,6 +20,6 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'ui-store',
-    }
-  )
+    },
+  ),
 );

@@ -14,22 +14,22 @@ describe('uiStore', () => {
 
   it('should toggle notebook panel state', () => {
     const store = useUiStore.getState();
-    
+
     expect(store.isNotebookPanelCollapsed).toBe(false);
-    
+
     store.toggleNotebookPanel();
     expect(useUiStore.getState().isNotebookPanelCollapsed).toBe(true);
-    
+
     store.toggleNotebookPanel();
     expect(useUiStore.getState().isNotebookPanelCollapsed).toBe(false);
   });
 
   it('should set notebook panel collapsed state directly', () => {
     const store = useUiStore.getState();
-    
+
     store.setNotebookPanelCollapsed(true);
     expect(useUiStore.getState().isNotebookPanelCollapsed).toBe(true);
-    
+
     store.setNotebookPanelCollapsed(false);
     expect(useUiStore.getState().isNotebookPanelCollapsed).toBe(false);
   });

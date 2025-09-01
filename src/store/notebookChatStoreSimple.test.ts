@@ -5,16 +5,16 @@ import type { AiChatMessage } from '../types/ai-chat';
 describe('notebookChatStoreSimple', () => {
   beforeEach(() => {
     // Reset store state
-    useNotebookChatStoreSimple.setState({ 
+    useNotebookChatStoreSimple.setState({
       messagesByFile: {},
       activeFileId: null,
-      isLoadingMessages: false
+      isLoadingMessages: false,
     });
   });
 
   it('should handle file switching without race conditions', () => {
     const store = useNotebookChatStoreSimple.getState();
-    
+
     const file1Messages: AiChatMessage[] = [
       {
         id: 'msg1',
@@ -54,7 +54,7 @@ describe('notebookChatStoreSimple', () => {
 
   it('should handle switching to empty files correctly', () => {
     const store = useNotebookChatStoreSimple.getState();
-    
+
     // Start with a file that has messages
     const existingMessages: AiChatMessage[] = [
       {
@@ -82,7 +82,7 @@ describe('notebookChatStoreSimple', () => {
 
   it('should update messages for the current file only', () => {
     const store = useNotebookChatStoreSimple.getState();
-    
+
     const file1Messages: AiChatMessage[] = [
       {
         id: 'msg1',
@@ -135,7 +135,7 @@ describe('notebookChatStoreSimple', () => {
 
   it('should handle null file IDs correctly', () => {
     const store = useNotebookChatStoreSimple.getState();
-    
+
     // Start with a file
     store.switchToFile('file1', [
       {
