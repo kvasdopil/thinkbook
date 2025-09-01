@@ -41,8 +41,8 @@ export function AiChat() {
   }
 
   return (
-    <div className="flex flex-col h-full ">
-      <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl align-self-center">
+    <div className="flex flex-col h-full items-center">
+      <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl">
         {messages.map((message, index) => (
           <ChatMessage key={index} message={message} />
         ))}
@@ -66,8 +66,8 @@ export function AiChat() {
         <div ref={messagesEndRef} />
       </div>
 
-      <footer className="border-t border-gray-200 bg-white p-4">
-        <div className="max-w-7xl mx-auto relative">
+      <footer className="border-t border-gray-200 bg-white p-4 w-full flex items-center justify-center">
+        <div className="max-w-7xl relative flex-1">
           <ChatInput
             onSendMessage={sendMessage}
             disabled={isLoading}

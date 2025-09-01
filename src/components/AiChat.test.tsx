@@ -12,7 +12,8 @@ vi.mock('@ai-sdk/google');
 
 const mockUseGeminiApiKey = useGeminiApiKeyHook.useGeminiApiKey as Mock;
 const mockStreamText = aiSdk.streamText as Mock;
-const mockCreateGoogleGenerativeAI = googleSdk.createGoogleGenerativeAI as unknown as Mock;
+const mockCreateGoogleGenerativeAI =
+  googleSdk.createGoogleGenerativeAI as unknown as Mock;
 
 describe('AiChat', () => {
   beforeEach(() => {
@@ -84,6 +85,7 @@ describe('AiChat', () => {
       },
     };
 
+    // Provide a minimal object with fullStream to hit client transport fallback
     mockStreamText.mockResolvedValue({
       fullStream: mockFullStream,
     });
@@ -147,11 +149,12 @@ describe('AiChat', () => {
     mockCreateGoogleGenerativeAI.mockReturnValue(mockModel);
 
     let resolveStreamText: (value: {
-      fullStream: AsyncIterable<{type: string, text?: string}>;
+      fullStream: AsyncIterable<{ type: string; text?: string }>;
     }) => void;
     const streamTextPromise = new Promise((resolve) => {
       resolveStreamText = resolve;
     });
+    // Provide a promise resolving to an object with fullStream
     mockStreamText.mockReturnValue(streamTextPromise);
 
     const user = userEvent.setup();

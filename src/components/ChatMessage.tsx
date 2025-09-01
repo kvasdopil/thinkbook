@@ -33,18 +33,22 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   // Assistant message with tool calls and text
   return (
-    <div className="space-y-6 max-w-full">
+    <div>
       {/* Render tool invocations */}
-      {message.toolInvocations?.map((toolInvocation, index) => (
-        <MessageToolCallPart
-          key={index}
-          toolCallId={toolInvocation.toolCallId}
-          toolName={toolInvocation.toolName}
-          args={toolInvocation.args}
-          result={toolInvocation.result}
-          status={toolInvocation.state === 'result' ? 'success' : 'in-progress'}
-        />
-      ))}
+      <div className="flex flex-row gap-2">
+        {message.toolInvocations?.map((toolInvocation, index) => (
+          <MessageToolCallPart
+            key={index}
+            toolCallId={toolInvocation.toolCallId}
+            toolName={toolInvocation.toolName}
+            args={toolInvocation.args}
+            result={toolInvocation.result}
+            status={
+              toolInvocation.state === 'result' ? 'success' : 'in-progress'
+            }
+          />
+        ))}
+      </div>
 
       {/* Render message content */}
       {message.content && (
