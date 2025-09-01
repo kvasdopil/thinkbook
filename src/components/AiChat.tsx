@@ -1,15 +1,30 @@
 import { useEffect, useRef } from 'react';
-import { useAiChat } from '../hooks/useAiChat';
+import { useEditableChat } from '../hooks/useEditableChat';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 
 export function AiChat() {
-  const { messages, isLoading, error, hasApiKey, sendMessage } = useAiChat();
+  const { 
+    messages, 
+    isLoading, 
+    error, 
+    hasApiKey, 
+    sendMessage, 
+    startEditing, 
+    cancelEditing, 
+    rollbackAndEdit,
+    editingMessageId 
+  } = useEditableChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Find the index of the message being edited
+  const editingMessageIndex = editingMessageId 
+    ? messages.findIndex(msg => msg.id === editingMessageId)
+    : -1;
 
   useEffect(() => {
     scrollToBottom();
@@ -44,7 +59,15 @@ export function AiChat() {
     <div className="flex flex-col h-full items-center">
       <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl">
         {messages.map((message, index) => (
-          <ChatMessage key={index} message={message} />
+          <ChatMessage 
+            key={message.id} 
+            message={message} 
+            messageIndex={index}
+            editingMessageIndex={editingMessageIndex}
+            onStartEdit={startEditing}
+            onCancelEdit={cancelEditing}
+            onSendEdit={rollbackAndEdit}
+          />
         ))}
 
         {isLoading && (

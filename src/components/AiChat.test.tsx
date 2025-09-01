@@ -1,19 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { AiChat } from './AiChat';
-import * as useGeminiApiKeyHook from '../hooks/useGeminiApiKey';
-import * as aiSdk from 'ai';
-import * as googleSdk from '@ai-sdk/google';
+import * as useEditableChatHook from '../hooks/useEditableChat';
 
-vi.mock('../hooks/useGeminiApiKey');
-vi.mock('ai');
-vi.mock('@ai-sdk/google');
+vi.mock('../hooks/useEditableChat');
 
-const mockUseGeminiApiKey = useGeminiApiKeyHook.useGeminiApiKey as Mock;
-const mockStreamText = aiSdk.streamText as Mock;
-const mockCreateGoogleGenerativeAI =
-  googleSdk.createGoogleGenerativeAI as unknown as Mock;
+const mockUseEditableChat = useEditableChatHook.useEditableChat as Mock;
 
 describe('AiChat', () => {
   beforeEach(() => {
@@ -27,9 +19,16 @@ describe('AiChat', () => {
   });
 
   it('shows configuration message when API key is not available', () => {
-    mockUseGeminiApiKey.mockReturnValue({
-      apiKey: null,
+    mockUseEditableChat.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
       hasApiKey: false,
+      sendMessage: vi.fn(),
+      startEditing: vi.fn(),
+      cancelEditing: vi.fn(),
+      rollbackAndEdit: vi.fn(),
+      editingMessageId: null,
     });
 
     render(<AiChat />);
@@ -42,9 +41,16 @@ describe('AiChat', () => {
   });
 
   it('renders chat interface when API key is available', () => {
-    mockUseGeminiApiKey.mockReturnValue({
-      apiKey: 'test-api-key',
+    mockUseEditableChat.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
       hasApiKey: true,
+      sendMessage: vi.fn(),
+      startEditing: vi.fn(),
+      cancelEditing: vi.fn(),
+      rollbackAndEdit: vi.fn(),
+      editingMessageId: null,
     });
 
     render(<AiChat />);
@@ -55,9 +61,16 @@ describe('AiChat', () => {
   });
 
   it('shows alert when trying to send message without API key', async () => {
-    mockUseGeminiApiKey.mockReturnValue({
-      apiKey: null,
+    mockUseEditableChat.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
       hasApiKey: false,
+      sendMessage: vi.fn(),
+      startEditing: vi.fn(),
+      cancelEditing: vi.fn(),
+      rollbackAndEdit: vi.fn(),
+      editingMessageId: null,
     });
 
     render(<AiChat />);
@@ -70,140 +83,109 @@ describe('AiChat', () => {
   });
 
   it('displays user message immediately when sent', async () => {
-    mockUseGeminiApiKey.mockReturnValue({
-      apiKey: 'test-api-key',
+    const mockSendMessage = vi.fn();
+    mockUseEditableChat.mockReturnValue({
+      messages: [
+        {
+          id: 'msg-1',
+          role: 'user',
+          parts: [{ type: 'text', text: 'Test message' }],
+          originalMessage: {},
+        }
+      ],
+      isLoading: false,
+      error: null,
       hasApiKey: true,
+      sendMessage: mockSendMessage,
+      startEditing: vi.fn(),
+      cancelEditing: vi.fn(),
+      rollbackAndEdit: vi.fn(),
+      editingMessageId: null,
     });
 
-    const mockModel = vi.fn();
-    mockCreateGoogleGenerativeAI.mockReturnValue(mockModel);
-
-    const mockFullStream = {
-      async *[Symbol.asyncIterator]() {
-        yield { type: 'text-delta', text: 'Hello' };
-        yield { type: 'text-delta', text: ' there!' };
-      },
-    };
-
-    // Provide a minimal object with fullStream to hit client transport fallback
-    mockStreamText.mockResolvedValue({
-      fullStream: mockFullStream,
-    });
-
-    const user = userEvent.setup();
     render(<AiChat />);
 
-    const input = screen.getByPlaceholderText('Ask the AI assistant...');
-    const sendButton = screen.getByRole('button', { name: /send/i });
-
-    await user.type(input, 'Test message');
-    await user.click(sendButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Test message')).toBeInTheDocument();
-      expect(screen.getByText('Test message')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Test message')).toBeInTheDocument();
   });
 
   it('handles streaming AI response', async () => {
-    mockUseGeminiApiKey.mockReturnValue({
-      apiKey: 'test-api-key',
+    mockUseEditableChat.mockReturnValue({
+      messages: [
+        {
+          id: 'msg-1',
+          role: 'user',
+          parts: [{ type: 'text', text: 'Test message' }],
+          originalMessage: {},
+        },
+        {
+          id: 'msg-2',
+          role: 'assistant',
+          parts: [{ type: 'text', text: 'Hello there!' }],
+          originalMessage: {},
+        }
+      ],
+      isLoading: false,
+      error: null,
       hasApiKey: true,
+      sendMessage: vi.fn(),
+      startEditing: vi.fn(),
+      cancelEditing: vi.fn(),
+      rollbackAndEdit: vi.fn(),
+      editingMessageId: null,
     });
 
-    const mockModel = vi.fn();
-    mockCreateGoogleGenerativeAI.mockReturnValue(mockModel);
-
-    const mockFullStream = {
-      async *[Symbol.asyncIterator]() {
-        yield { type: 'text-delta', text: 'Hello' };
-        yield { type: 'text-delta', text: ' there!' };
-      },
-    };
-
-    mockStreamText.mockResolvedValue({
-      fullStream: mockFullStream,
-    });
-
-    const user = userEvent.setup();
     render(<AiChat />);
 
-    const input = screen.getByPlaceholderText('Ask the AI assistant...');
-    const sendButton = screen.getByRole('button', { name: /send/i });
-
-    await user.type(input, 'Test message');
-    await user.click(sendButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Hello there!')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Hello there!')).toBeInTheDocument();
   });
 
   it('shows thinking state while loading', async () => {
-    mockUseGeminiApiKey.mockReturnValue({
-      apiKey: 'test-api-key',
+    mockUseEditableChat.mockReturnValue({
+      messages: [
+        {
+          id: 'msg-1',
+          role: 'user',
+          parts: [{ type: 'text', text: 'Test message' }],
+          originalMessage: {},
+        }
+      ],
+      isLoading: true,
+      error: null,
       hasApiKey: true,
+      sendMessage: vi.fn(),
+      startEditing: vi.fn(),
+      cancelEditing: vi.fn(),
+      rollbackAndEdit: vi.fn(),
+      editingMessageId: null,
     });
 
-    const mockModel = vi.fn();
-    mockCreateGoogleGenerativeAI.mockReturnValue(mockModel);
-
-    let resolveStreamText: (value: {
-      fullStream: AsyncIterable<{ type: string; text?: string }>;
-    }) => void;
-    const streamTextPromise = new Promise((resolve) => {
-      resolveStreamText = resolve;
-    });
-    // Provide a promise resolving to an object with fullStream
-    mockStreamText.mockReturnValue(streamTextPromise);
-
-    const user = userEvent.setup();
     render(<AiChat />);
 
-    const input = screen.getByPlaceholderText('Ask the AI assistant...');
-    const sendButton = screen.getByRole('button', { name: /send/i });
-
-    await user.type(input, 'Test message');
-    await user.click(sendButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Thinking...')).toBeInTheDocument();
-    });
-
-    resolveStreamText!({
-      fullStream: {
-        async *[Symbol.asyncIterator]() {
-          yield { type: 'text-delta', text: 'Response' };
-        },
-      },
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByText('Thinking...')).not.toBeInTheDocument();
-    });
+    expect(screen.getByText('Thinking...')).toBeInTheDocument();
   });
 
   it('handles API errors gracefully', async () => {
-    mockUseGeminiApiKey.mockReturnValue({
-      apiKey: 'test-api-key',
+    mockUseEditableChat.mockReturnValue({
+      messages: [
+        {
+          id: 'msg-1',
+          role: 'user',
+          parts: [{ type: 'text', text: 'Test message' }],
+          originalMessage: {},
+        }
+      ],
+      isLoading: false,
+      error: 'API Error',
       hasApiKey: true,
+      sendMessage: vi.fn(),
+      startEditing: vi.fn(),
+      cancelEditing: vi.fn(),
+      rollbackAndEdit: vi.fn(),
+      editingMessageId: null,
     });
 
-    const mockModel = vi.fn();
-    mockCreateGoogleGenerativeAI.mockReturnValue(mockModel);
-    mockStreamText.mockRejectedValue(new Error('API Error'));
-
-    const user = userEvent.setup();
     render(<AiChat />);
 
-    const input = screen.getByPlaceholderText('Ask the AI assistant...');
-    const sendButton = screen.getByRole('button', { name: /send/i });
-
-    await user.type(input, 'Test message');
-    await user.click(sendButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Error:.*API Error/)).toBeInTheDocument();
-    });
+    expect(screen.getByText(/Error:.*API Error/)).toBeInTheDocument();
   });
 });

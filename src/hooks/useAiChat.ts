@@ -75,5 +75,6 @@ export function useAiChat() {
     error: chat.error?.message ?? null,
     hasApiKey,
     sendMessage,
+    setMessages: chat.setMessages,
   };
 }
