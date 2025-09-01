@@ -12,7 +12,7 @@ vi.mock('@ai-sdk/google');
 
 const mockUseGeminiApiKey = useGeminiApiKeyHook.useGeminiApiKey as Mock;
 const mockStreamText = aiSdk.streamText as Mock;
-const mockGoogle = googleSdk.google as unknown as Mock;
+const mockCreateGoogleGenerativeAI = googleSdk.createGoogleGenerativeAI as unknown as Mock;
 
 describe('AiChat', () => {
   beforeEach(() => {
@@ -75,17 +75,17 @@ describe('AiChat', () => {
     });
 
     const mockModel = vi.fn();
-    mockGoogle.mockReturnValue(mockModel);
+    mockCreateGoogleGenerativeAI.mockReturnValue(mockModel);
 
-    const mockTextStream = {
+    const mockFullStream = {
       async *[Symbol.asyncIterator]() {
-        yield 'Hello';
-        yield ' there!';
+        yield { type: 'text-delta', text: 'Hello' };
+        yield { type: 'text-delta', text: ' there!' };
       },
     };
 
     mockStreamText.mockResolvedValue({
-      textStream: mockTextStream,
+      fullStream: mockFullStream,
     });
 
     const user = userEvent.setup();
@@ -110,17 +110,17 @@ describe('AiChat', () => {
     });
 
     const mockModel = vi.fn();
-    mockGoogle.mockReturnValue(mockModel);
+    mockCreateGoogleGenerativeAI.mockReturnValue(mockModel);
 
-    const mockTextStream = {
+    const mockFullStream = {
       async *[Symbol.asyncIterator]() {
-        yield 'Hello';
-        yield ' there!';
+        yield { type: 'text-delta', text: 'Hello' };
+        yield { type: 'text-delta', text: ' there!' };
       },
     };
 
     mockStreamText.mockResolvedValue({
-      textStream: mockTextStream,
+      fullStream: mockFullStream,
     });
 
     const user = userEvent.setup();
@@ -144,10 +144,10 @@ describe('AiChat', () => {
     });
 
     const mockModel = vi.fn();
-    mockGoogle.mockReturnValue(mockModel);
+    mockCreateGoogleGenerativeAI.mockReturnValue(mockModel);
 
     let resolveStreamText: (value: {
-      textStream: AsyncIterable<string>;
+      fullStream: AsyncIterable<{type: string, text?: string}>;
     }) => void;
     const streamTextPromise = new Promise((resolve) => {
       resolveStreamText = resolve;
@@ -168,9 +168,9 @@ describe('AiChat', () => {
     });
 
     resolveStreamText!({
-      textStream: {
+      fullStream: {
         async *[Symbol.asyncIterator]() {
-          yield 'Response';
+          yield { type: 'text-delta', text: 'Response' };
         },
       },
     });
@@ -187,7 +187,7 @@ describe('AiChat', () => {
     });
 
     const mockModel = vi.fn();
-    mockGoogle.mockReturnValue(mockModel);
+    mockCreateGoogleGenerativeAI.mockReturnValue(mockModel);
     mockStreamText.mockRejectedValue(new Error('API Error'));
 
     const user = userEvent.setup();

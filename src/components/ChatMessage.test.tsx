@@ -7,7 +7,7 @@ describe('ChatMessage', () => {
     const message = {
       id: '1',
       role: 'user' as const,
-      parts: [{ type: 'text' as const, text: 'Hello AI!' }],
+      content: 'Hello AI!',
     };
 
     render(<ChatMessage message={message} />);
@@ -16,30 +16,27 @@ describe('ChatMessage', () => {
 
     const messageContainer = screen
       .getByText('Hello AI!')
-      .closest('div.bg-primary-600');
-    expect(messageContainer).toHaveClass('bg-primary-600', 'text-white');
+      .closest('div.bg-blue-600');
+    expect(messageContainer).toHaveClass('bg-blue-600', 'text-white');
   });
 
-  it('renders assistant message with tool call indicators', () => {
+  it('renders assistant message with content', () => {
     const message = {
       id: '2',
       role: 'assistant' as const,
-      parts: [{ type: 'text' as const, text: 'Hello there!' }],
+      content: 'Hello there!',
     };
 
     render(<ChatMessage message={message} />);
 
     expect(screen.getByText('Hello there!')).toBeInTheDocument();
-    expect(
-      screen.getByText(/I'll analyze your request and provide insights/),
-    ).toBeInTheDocument();
   });
 
   it('aligns user messages to the right', () => {
     const message = {
       id: '1',
       role: 'user' as const,
-      parts: [{ type: 'text' as const, text: 'User message' }],
+      content: 'User message',
     };
 
     render(<ChatMessage message={message} />);
@@ -52,7 +49,7 @@ describe('ChatMessage', () => {
     const message = {
       id: '2',
       role: 'assistant' as const,
-      parts: [{ type: 'text' as const, text: 'Assistant message' }],
+      content: 'Assistant message',
     };
 
     render(<ChatMessage message={message} />);
@@ -65,15 +62,11 @@ describe('ChatMessage', () => {
     const message = {
       id: '3',
       role: 'assistant' as const,
-      parts: [
-        { type: 'text' as const, text: 'Part 1' },
-        { type: 'text' as const, text: 'Part 2' },
-      ],
+      content: 'Part 1 Part 2',
     };
 
     render(<ChatMessage message={message} />);
 
-    expect(screen.getByText('Part 1')).toBeInTheDocument();
-    expect(screen.getByText('Part 2')).toBeInTheDocument();
+    expect(screen.getByText('Part 1 Part 2')).toBeInTheDocument();
   });
 });

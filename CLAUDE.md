@@ -15,8 +15,8 @@
 - Each user story should have playwright tests implemented
 - Each user story should have unit tests implemented
 - Playwright tests should ALWAYS run in headless mode, with --reporter=list -x options
-- After completing work on a user story ALWAYS make sure to perform spec compliance review with `spec-compliance-reviewer` agent, provide it with the filename of a user-story
-- After completing work on a user story ALWAYS make sure to perform architectural review with `minimal-change-reviewer` agent
+- before starting a new task, make sure the plan contains spec compliance review with `spec-compliance-reviewer` agent
+- before starting a new task, make sure the plan contains architectural review with `minimal-change-reviewer` agent
 - Never modify user-stories unless explicitly asked by a user
 - in playwright tests redirect console.log and console.error to cli output so you can see why tests are failing
 
