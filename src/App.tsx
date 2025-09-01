@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { FiSettings } from 'react-icons/fi';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { SettingsModal } from './components/SettingsModal';
 import { AiChat } from './components/AiChat';
 import { NotebookFilePanel } from './components/NotebookFilePanel';
+import { NotebookHeader } from './components/NotebookHeader';
 import { useNotebookFiles } from './hooks/useNotebookFiles';
 import { useUiStore } from './store/uiStore';
 import type { SettingsConfig } from './components/SettingsModal';
@@ -15,7 +14,7 @@ function App() {
   const [currentNotebook, setCurrentNotebook] = useState<NotebookFile | null>(
     null,
   );
-  const { activeFile } = useNotebookFiles();
+  const { activeFile, updateFile } = useNotebookFiles();
   const { isNotebookPanelCollapsed, toggleNotebookPanel } = useUiStore();
 
   useEffect(() => {
@@ -70,42 +69,25 @@ function App() {
     }
   };
 
+  const handleTitleUpdate = (id: string, title: string) => {
+    updateFile(id, { title });
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans">
-      <header className="border-b border-gray-200 bg-white p-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggleNotebookPanel}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label={isNotebookPanelCollapsed ? "Show notebook panel" : "Hide notebook panel"}
-              title={isNotebookPanelCollapsed ? "Show notebook panel" : "Hide notebook panel"}
-            >
-              {isNotebookPanelCollapsed ? (
-                <FaChevronRight className="w-4 h-4" />
-              ) : (
-                <FaChevronLeft className="w-4 h-4" />
-              )}
-            </button>
-            <h1 className="text-2xl font-bold outline-none">AI Chat Assistant</h1>
-          </div>
-          <button
-            onClick={handleSettingsClick}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
-            aria-label="Open settings"
-            title="Settings"
-          >
-            <FiSettings className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
-
       <main className="flex-1 flex overflow-hidden">
         <NotebookFilePanel
           onFileSelect={handleFileSelect}
           onNewFile={handleNewFile}
         />
         <div className="flex-1 flex flex-col">
+          <NotebookHeader
+            isNotebookPanelCollapsed={isNotebookPanelCollapsed}
+            toggleNotebookPanel={toggleNotebookPanel}
+            activeFile={activeFile}
+            onTitleUpdate={handleTitleUpdate}
+            onSettingsClick={handleSettingsClick}
+          />
           <AiChat currentNotebook={currentNotebook} />
         </div>
       </main>

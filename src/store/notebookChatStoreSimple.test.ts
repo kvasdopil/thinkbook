@@ -123,7 +123,7 @@ describe('notebookChatStoreSimple', () => {
     ];
 
     store.updateMessages(updatedMessages);
-    let currentState = useNotebookChatStoreSimple.getState();
+    const currentState = useNotebookChatStoreSimple.getState();
 
     // File1 should have updated messages
     expect(currentState.getCurrentMessages()).toEqual(updatedMessages);

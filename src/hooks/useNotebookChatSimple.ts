@@ -3,7 +3,7 @@ import { useEditableChat } from './useEditableChat';
 import { useNotebookFiles } from './useNotebookFiles';
 import { useNotebookChatStoreSimple } from '../store/notebookChatStoreSimple';
 import type { NotebookFile } from '../types/notebook';
-import type { AiChatMessage } from '../types/ai-chat';
+import type { AiChatMessage, ToolInvocation, MessagePart } from '../types/ai-chat';
 import { listCells } from '../ai-functions';
 
 interface UseNotebookChatSimpleProps {
@@ -25,8 +25,6 @@ export function useNotebookChatSimple({ currentNotebook }: UseNotebookChatSimple
   const {
     switchToFile,
     updateMessages,
-    getCurrentMessages,
-    getMessagesForFile,
     isLoadingMessages,
   } = useNotebookChatStoreSimple();
 
@@ -44,7 +42,7 @@ export function useNotebookChatSimple({ currentNotebook }: UseNotebookChatSimple
         toolInvocations: msg.toolInvocations || [],
         createdAt: new Date(),
         content: msg.content || '',
-      })) as any[];
+      })) as Parameters<typeof chat.setMessages>[0];
 
       chat.setMessages(messagesForUI);
     } else {
@@ -52,7 +50,7 @@ export function useNotebookChatSimple({ currentNotebook }: UseNotebookChatSimple
       switchToFile(null);
       chat.setMessages([]);
     }
-  }, [currentNotebook?.id, switchToFile, chat.setMessages]);
+  }, [currentNotebook?.id, switchToFile, chat.setMessages, chat, currentNotebook]);
 
   // Save messages when chat changes - but only if we're not switching files
   useEffect(() => {
@@ -62,9 +60,9 @@ export function useNotebookChatSimple({ currentNotebook }: UseNotebookChatSimple
     const messagesToStore: AiChatMessage[] = chat.messages.map((msg) => ({
       id: msg.id,
       role: msg.role,
-      parts: (msg.parts || []) as any,
-      content: (msg.originalMessage as any)?.content || '',
-      toolInvocations: (msg.originalMessage as any)?.toolInvocations || [],
+      parts: (msg.parts || []).map(p => p as MessagePart),
+      content: (msg.originalMessage as Record<string, unknown>)?.content as string || '',
+      toolInvocations: (msg.originalMessage as Record<string, unknown>)?.toolInvocations as ToolInvocation[] || [],
     }));
 
     // Update the store - this prevents race conditions
@@ -76,7 +74,7 @@ export function useNotebookChatSimple({ currentNotebook }: UseNotebookChatSimple
       { messages: messagesToStore },
       false, // Don't update timestamp for auto-saves
     );
-  }, [chat.messages, currentNotebook?.id, updateMessages, updateFile, isLoadingMessages]);
+  }, [chat.messages, currentNotebook?.id, updateMessages, updateFile, isLoadingMessages, currentNotebook]);
 
   // Enhanced send message that also updates cells
   const sendMessage = useCallback(async (messageText: string) => {
@@ -95,7 +93,7 @@ export function useNotebookChatSimple({ currentNotebook }: UseNotebookChatSimple
         console.error('Failed to update cells:', error);
       }
     }
-  }, [chat.sendMessage, currentNotebook, updateFile]);
+  }, [chat, currentNotebook, updateFile]);
 
   return {
     ...chat,

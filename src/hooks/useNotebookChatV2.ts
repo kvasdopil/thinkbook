@@ -19,7 +19,6 @@ export function useNotebookChatV2({ currentNotebook }: UseNotebookChatV2Props) {
     isSendingMessage,
     error,
     setMessages,
-    addMessage,
     removeMessagesFromIndex,
     setSendingMessage,
     setError,
@@ -38,11 +37,11 @@ export function useNotebookChatV2({ currentNotebook }: UseNotebookChatV2Props) {
   // Sync AI chat messages with our store
   useEffect(() => {
     const aiMessages = aiChat.messages.map((msg, index) => ({
-      id: `msg-${index}-${msg.createdAt?.getTime() || Date.now()}`,
+      id: `msg-${index}-${((msg as unknown as Record<string, unknown>).createdAt as Date)?.getTime() || Date.now()}`,
       role: msg.role as 'user' | 'assistant',
-      parts: msg.parts || [],
-      content: msg.content || '',
-      toolInvocations: msg.toolInvocations || [],
+      parts: (msg.parts as unknown[]).filter(p => p).map(p => p as { type: 'text' | 'tool-call' | 'tool-result'; text?: string }) || [],
+      content: (msg as unknown as Record<string, unknown>).content as string || '',
+      toolInvocations: (msg as unknown as Record<string, unknown>).toolInvocations as Array<{ toolCallId: string; toolName: string; args: Record<string, unknown>; result?: unknown; state: 'partial-call' | 'result' }> || [],
     }));
 
     // Only update if messages actually changed
@@ -62,15 +61,15 @@ export function useNotebookChatV2({ currentNotebook }: UseNotebookChatV2Props) {
       const aiChatMessages = messages.map(msg => ({
         id: msg.id,
         role: msg.role,
-        parts: msg.parts,
-        toolInvocations: msg.toolInvocations,
-        content: msg.content,
+        parts: msg.parts || [],
+        toolInvocations: msg.toolInvocations || [],
+        content: msg.content || '',
         createdAt: new Date(),
-      }));
+      })) as Parameters<typeof aiChat.setMessages>[0];
       
       aiChat.setMessages(aiChatMessages);
     }
-  }, [messages, aiChat.setMessages]);
+  }, [messages, aiChat.setMessages, aiChat]);
 
   const sendMessage = useCallback(async (messageText: string) => {
     if (!aiChat.hasApiKey) {

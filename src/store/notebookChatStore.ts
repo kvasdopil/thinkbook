@@ -5,7 +5,7 @@ import type { AiChatMessage } from '../types/ai-chat';
 import { storage } from '../utils/storage';
 
 // Debounced storage helper
-const debounce = <T extends (...args: any[]) => any>(
+const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number,
 ): T => {
@@ -177,7 +177,8 @@ export const useNotebookChatStore = create<NotebookChatState & NotebookChatActio
 
       deleteFile: (id: string) => {
         set(state => {
-          const { [id]: _, ...remainingFiles } = state.files;
+          const { [id]: removedFile, ...remainingFiles } = state.files;
+          void removedFile; // Acknowledge unused variable
           return {
             files: remainingFiles,
             activeFileId: state.activeFileId === id ? null : state.activeFileId,

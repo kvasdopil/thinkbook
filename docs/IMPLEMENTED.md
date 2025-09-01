@@ -289,3 +289,51 @@
 - maintains existing chat editing functionality through careful hook composition
 - Type-safe throughout with minimal use of `unknown` for complex AI SDK types
 - Follows established architectural patterns for hooks, components, and storage utilities
+
+## 0011.NOTEBOOK_TITLE
+
+**Status:** ✅ Complete
+
+**Summary:** Implemented an editable notebook title header that appears as the first (non-sticky) element above all messages and cells, allowing users to label and organize their notebooks quickly.
+
+**Implementation Details:**
+
+- Created `src/components/NotebookHeader.tsx` - Header component with editable title input and settings icon
+- Updated `src/App.tsx` - Integrated NotebookHeader into main application layout between NotebookFilePanel and AiChat
+- Title appears as transparent input styled like h1 with classes: `text-3xl font-bold leading-tight outline-none bg-transparent`
+- Clicking anywhere on title area focuses the input for editing
+- Title changes persist via `useNotebookFiles` hook, updating `title` property and `updatedAt` only when value actually changes
+- Changes apply on blur or Enter key press, preventing unintended updates on every keystroke
+- Settings icon (FaCog) positioned at right end of header opens existing Settings modal via App.tsx state management
+- Header positioned in main layout (not inside AiChat) to ensure non-sticky behavior as specified
+- Displays "Untitled" for files without titles and syncs with activeFile changes during file switching
+- Full keyboard accessibility with proper tabIndex, ARIA labels, and WCAG 2.1 AA compliance
+- Focus management handles file switching scenarios to prevent focus issues while editing
+
+**Testing:**
+
+- Comprehensive unit tests for `NotebookHeader.tsx` covering title editing, persistence, focus management, and accessibility
+- Tests verify onBlur and Enter key persistence, settings icon integration, and proper rendering with/without active files
+- Playwright integration tests covering end-to-end title editing workflows, persistence across reloads, and file switching
+- Tests include keyboard navigation, accessibility attributes, and non-sticky header behavior verification
+- All unit tests pass with full coverage of component functionality and edge cases
+
+**Files Created/Modified:**
+
+- `src/components/NotebookHeader.tsx` - New editable title header component
+- `src/components/NotebookHeader.test.tsx` - Comprehensive unit tests for header component
+- `src/App.tsx` - Added NotebookHeader integration and title update handler
+- `tests/notebook-title.spec.ts` - Playwright integration tests for complete title functionality
+
+**Technical Notes:**
+
+- Uses existing `useNotebookFiles` hook's `updateFile` method for persistence with proper `updatedAt` semantics
+- Settings modal integration leverages existing App.tsx state management pattern for consistency
+- Header positioned in main application layout (not within AiChat component) to ensure non-sticky behavior per spec
+- Component follows established patterns for focus management, accessibility, and TypeScript interfaces
+- Event handling uses onKeyDown instead of onKeyPress for proper Enter key detection in modern browsers
+- Local state synchronization with activeFile changes handles file switching edge cases appropriately
+- Uses react-icons FaCog for settings icon following project guidelines
+- Full accessibility support with banner role, ARIA labels, proper tabIndex, and keyboard navigation
+- Maintains architectural consistency with existing component structure and testing patterns
+- All acceptance criteria from user story specification fully implemented and tested
