@@ -1,6 +1,7 @@
 import {
   type ChatTransport,
   type UIMessage,
+  type ToolSet,
   convertToModelMessages,
   createUIMessageStream,
   stepCountIs,
@@ -8,7 +9,7 @@ import {
 } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
-type Tools = Record<string, unknown>;
+type Tools = ToolSet;
 
 export function createClientChatTransport(options: {
   apiKeyProvider: () => string | null | Promise<string | null>;
@@ -30,9 +31,7 @@ export function createClientChatTransport(options: {
       });
 
       const keyOrPromise = apiKeyProvider();
-      const isPromise = (
-        v: unknown,
-      ): v is Promise<string | null> =>
+      const isPromise = (v: unknown): v is Promise<string | null> =>
         typeof (v as { then?: unknown }).then === 'function';
       const apiKey = isPromise(keyOrPromise)
         ? await keyOrPromise
@@ -92,7 +91,11 @@ export function createClientChatTransport(options: {
           w.write({ type: 'start' });
           w.write({ type: 'text-start', id: textId });
 
-          for await (const delta of (result as { fullStream: AsyncIterable<{ type: string; text?: string }> }).fullStream) {
+          for await (const delta of (
+            result as {
+              fullStream: AsyncIterable<{ type: string; text?: string }>;
+            }
+          ).fullStream) {
             if (
               delta?.type === 'text-delta' &&
               typeof delta.text === 'string'

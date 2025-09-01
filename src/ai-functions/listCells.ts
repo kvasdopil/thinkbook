@@ -19,21 +19,21 @@ export async function listCells(): Promise<CellData[]> {
       type: 'code',
       text: 'print("Hello, World!")',
       status: 'completed',
-      output: ['Hello, World!']
+      output: ['Hello, World!'],
     },
     {
-      id: 'cell-2', 
+      id: 'cell-2',
       type: 'markdown',
       text: '# Sample Notebook\n\nThis is a test notebook with some sample cells.',
       status: 'idle',
-      output: []
+      output: [],
     },
     {
       id: 'cell-3',
-      type: 'code', 
+      type: 'code',
       text: 'x = 42\nprint(f"The answer is {x}")',
       status: 'completed',
-      output: ['The answer is 42']
-    }
+      output: ['The answer is 42'],
+    },
   ];
 }
