@@ -6,6 +6,7 @@ declare const self: DedicatedWorkerGlobalScope;
 
 interface PyodideInterface {
   runPython: (code: string) => unknown;
+  setInterruptBuffer: (buffer: Uint8Array) => void;
   globals: {
     set: (name: string, value: unknown) => void;
     get: (name: string) => unknown;
@@ -24,6 +25,7 @@ declare global {
 let pyodide: PyodideInterface | null = null;
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
+let interruptBuffer: Uint8Array | null = null;
 
 // Initialize Pyodide
 async function initializePyodide(): Promise<void> {
@@ -100,6 +102,14 @@ async function initializePyodide(): Promise<void> {
       console.log('[PyodideWorker] Pyodide initialized successfully');
       isInitialized = true;
 
+      // Set interrupt buffer if it was already provided
+      if (interruptBuffer && pyodide) {
+        pyodide.setInterruptBuffer(interruptBuffer);
+        console.log(
+          '[PyodideWorker] Interrupt buffer set during initialization',
+        );
+      }
+
       // Test basic functionality
       try {
         const testResult = pyodide?.runPython(
@@ -150,6 +160,14 @@ async function executeCode(code: string, messageId: string): Promise<void> {
     (
       globalThis as typeof globalThis & { currentMessageId: string }
     ).currentMessageId = messageId;
+
+    // Set interrupt buffer if available
+    if (interruptBuffer && pyodide) {
+      pyodide.setInterruptBuffer(interruptBuffer);
+      console.log(
+        `[PyodideWorker] Interrupt buffer set for execution ${messageId}`,
+      );
+    }
 
     console.log(
       `[PyodideWorker] Setting up streaming output for message ${messageId}`,
@@ -268,10 +286,21 @@ except:
       // Ignore cleanup errors
     }
 
+    // Check if it's a KeyboardInterrupt from cancellation
+    const errorString = String(error);
+    if (errorString.includes('KeyboardInterrupt')) {
+      console.log(`[PyodideWorker] Execution cancelled for ${messageId}`);
+      self.postMessage({
+        type: 'cancelled',
+        id: messageId,
+      } as WorkerResponse);
+      return;
+    }
+
     self.postMessage({
       type: 'error',
       id: messageId,
-      error: String(error),
+      error: errorString,
     } as WorkerResponse);
   }
 }
@@ -301,13 +330,34 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
       }
       break;
 
+    case 'setInterruptBuffer':
+      console.log('[PyodideWorker] Received setInterruptBuffer message');
+      if (event.data.buffer) {
+        interruptBuffer = new Uint8Array(event.data.buffer);
+        if (pyodide && isInitialized) {
+          pyodide.setInterruptBuffer(interruptBuffer);
+          console.log('[PyodideWorker] Interrupt buffer set');
+        } else {
+          console.log(
+            '[PyodideWorker] Interrupt buffer stored, will set when Pyodide is ready',
+          );
+        }
+      } else {
+        console.error(
+          '[PyodideWorker] setInterruptBuffer message missing buffer',
+        );
+      }
+      break;
+
     case 'interrupt':
-      console.log('[PyodideWorker] Received interrupt message');
-      // Pyodide doesn't support interruption, but we can signal error
+      console.log(
+        '[PyodideWorker] Received interrupt message - legacy fallback',
+      );
+      // This is now a legacy fallback - SharedArrayBuffer should be used instead
       self.postMessage({
         type: 'error',
         id,
-        error: 'Execution interrupted',
+        error: 'Execution interrupted (legacy)',
       } as WorkerResponse);
       break;
 

@@ -1,40 +1,82 @@
-import { useState, useCallback } from 'react';
-import { FaPlay, FaStop, FaSpinner } from 'react-icons/fa';
+import { useState, useCallback, useEffect } from 'react';
+import {
+  FaPlay,
+  FaStop,
+  FaSpinner,
+  FaExclamationTriangle,
+} from 'react-icons/fa';
 import { CodeEditor } from './CodeEditor';
 import { usePyodideWorker } from '../hooks/usePyodideWorker';
+import { useNotebookCodeStore } from '../store/notebookCodeStore';
 
 interface NotebookCellProps {
-  initialCode?: string;
+  notebookId?: string; // If provided, will persist code for this notebook
+  initialCode?: string; // Fallback if no notebookId provided
   onCodeChange?: (code: string) => void;
 }
 
 export function NotebookCell({
+  notebookId,
   initialCode = 'print("Hello, World!")',
   onCodeChange,
 }: NotebookCellProps) {
-  const [code, setCode] = useState(initialCode);
-  const [output, setOutput] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const { getCodeCell, updateCode, updateExecutionResult } =
+    useNotebookCodeStore();
+
+  // Get persisted code or use initialCode
+  const persistedCell = notebookId ? getCodeCell(notebookId) : null;
+  const [code, setCode] = useState(persistedCell?.code || initialCode);
+  const [output, setOutput] = useState<string[]>(persistedCell?.output || []);
+  const [error, setError] = useState<string | null>(
+    persistedCell?.error || null,
+  );
+
+  // Sync with persisted state when notebookId changes
+  useEffect(() => {
+    if (notebookId) {
+      const cell = getCodeCell(notebookId);
+      setCode(cell.code);
+      setOutput(cell.output);
+      setError(cell.error);
+    }
+  }, [notebookId, getCodeCell]);
 
   const handleOutputChange = useCallback(
     (newOutput: string[], newError: string | null) => {
       setOutput([...newOutput]);
       setError(newError);
+
+      // Persist execution results if we have a notebookId
+      if (notebookId) {
+        updateExecutionResult(notebookId, newOutput, newError);
+      }
     },
-    [],
+    [notebookId, updateExecutionResult],
   );
 
-  const { isReady, isExecuting, executeCode, interruptExecution, initError } =
-    usePyodideWorker({
-      onOutputChange: handleOutputChange,
-    });
+  const {
+    isReady,
+    isExecuting,
+    executionState,
+    executeCode,
+    interruptExecution,
+    initError,
+    supportsSharedArrayBuffer,
+  } = usePyodideWorker({
+    onOutputChange: handleOutputChange,
+  });
 
   const handleCodeChange = useCallback(
     (newCode: string) => {
       setCode(newCode);
       onCodeChange?.(newCode);
+
+      // Persist code if we have a notebookId
+      if (notebookId) {
+        updateCode(notebookId, newCode);
+      }
     },
-    [onCodeChange],
+    [onCodeChange, notebookId, updateCode],
   );
 
   const handleExecute = async () => {
@@ -75,17 +117,34 @@ export function NotebookCell({
               ⚠️ Python initialization failed
             </span>
           )}
+          {supportsSharedArrayBuffer === false && (
+            <div className="text-xs text-yellow-600 flex items-center">
+              <FaExclamationTriangle className="mr-1" />
+              Immediate cancellation unavailable
+            </div>
+          )}
         </div>
         <div className="flex items-center space-x-2">
-          {isExecuting ? (
+          {executionState === 'running' ? (
             <button
               onClick={handleInterrupt}
               className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 
                        transition-colors flex items-center space-x-1 cursor-pointer"
-              title="Interrupt execution"
+              title="Stop execution"
+              data-testid="stop-button"
             >
               <FaStop className="w-3 h-3" />
               <span>Stop</span>
+            </button>
+          ) : executionState === 'stopping' ? (
+            <button
+              disabled
+              className="px-3 py-1 text-sm bg-gray-500 text-white rounded flex items-center space-x-1 cursor-not-allowed"
+              title="Stopping execution..."
+              data-testid="stopping-button"
+            >
+              <FaSpinner className="w-3 h-3 animate-spin" />
+              <span>Stopping...</span>
             </button>
           ) : (
             <button
@@ -95,6 +154,7 @@ export function NotebookCell({
                        disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors 
                        flex items-center space-x-1 cursor-pointer"
               title="Run code"
+              data-testid="run-button"
             >
               <FaPlay className="w-3 h-3" />
               <span>Run</span>
@@ -112,10 +172,16 @@ export function NotebookCell({
           height={150}
           placeholder="# Enter Python code here..."
         />
-        {isExecuting && (
+        {executionState === 'running' && (
           <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs flex items-center">
             <FaSpinner className="animate-spin mr-1" />
             Running...
+          </div>
+        )}
+        {executionState === 'stopping' && (
+          <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs flex items-center">
+            <FaSpinner className="animate-spin mr-1" />
+            Stopping...
           </div>
         )}
       </div>

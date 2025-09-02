@@ -445,3 +445,101 @@
 - All streaming output appears immediately during `print()` execution, not after script completion
 - Error handling during streaming maintains proper execution button states and user feedback
 - Follows established architectural patterns for worker communication and React component integration
+
+## 0015.EXECUTION_CANCELLATION
+
+**Status:** ✅ Complete
+
+**Summary:** Implemented immediate execution cancellation for Python scripts using SharedArrayBuffer and Pyodide's interrupt mechanism, allowing users to stop infinite loops, slow scripts, and unwanted operations instantly.
+
+**Implementation Details:**
+
+- Updated `vite.config.ts` - Added required security headers (`Cross-Origin-Embedder-Policy: require-corp`, `Cross-Origin-Opener-Policy: same-origin`) for SharedArrayBuffer support in both development server and preview modes
+- Enhanced `src/types/worker.ts` - Added `setInterruptBuffer` message type and `cancelled` response type, plus `buffer: SharedArrayBuffer` parameter support
+- Updated `src/workers/pyodideWorker.ts` - Implemented SharedArrayBuffer interrupt buffer setup using `pyodide.setInterruptBuffer()`, KeyboardInterrupt detection for cancelled vs error distinction, and automatic cleanup of streaming overrides on cancellation
+- Enhanced `src/hooks/usePyodideWorker.ts` - Added SharedArrayBuffer detection, enhanced execution states (`idle`, `running`, `stopping`, `cancelled`), immediate SIGINT signaling via `buffer[0] = 2`, and graceful fallback for unsupported environments
+- Updated `src/components/NotebookCell.tsx` - Implemented three-state button system (Run/Stop/Stopping), SharedArrayBuffer unavailable warning display, and enhanced visual indicators with proper `data-testid` attributes for testing
+- Stop button appears immediately when execution starts, transforms to "Stopping..." state during cancellation with yellow indicator overlay
+- Immediate cancellation via SharedArrayBuffer SIGINT signal (buffer[0] = 2) set in main thread, with worker detecting KeyboardInterrupt for clean transition to cancelled state
+- "Execution interrupted by user" message displayed for cancelled executions without showing Python KeyboardInterrupt stack traces
+- Fallback interruption mechanism for environments without SharedArrayBuffer support
+- Enhanced execution state management prevents race conditions between cancellation and natural completion
+
+**Testing:**
+
+- Comprehensive unit tests in `src/hooks/usePyodideWorker.test.ts` covering SharedArrayBuffer detection, interrupt buffer setup, cancellation with/without SharedArrayBuffer support, race condition handling, and execution state transitions
+- Playwright integration tests in `tests/execution-cancellation.spec.ts` covering infinite loop cancellation, UI state transitions, SharedArrayBuffer warning display, multiple rapid cancellations, and output preservation before cancellation
+- Tests verify immediate cancellation capability, proper button state management, and graceful degradation when SharedArrayBuffer unavailable
+- Mock implementations for SharedArrayBuffer and Uint8Array classes for comprehensive unit test coverage
+
+**Files Created/Modified:**
+
+- `vite.config.ts` - Added security headers for SharedArrayBuffer support
+- `src/types/worker.ts` - Extended worker communication types for interrupt buffer and cancellation
+- `src/workers/pyodideWorker.ts` - Implemented Pyodide interrupt buffer integration and KeyboardInterrupt handling
+- `src/hooks/usePyodideWorker.ts` - Enhanced with SharedArrayBuffer support and advanced execution state management
+- `src/components/NotebookCell.tsx` - Updated UI for three-state button system and SharedArrayBuffer warnings
+- `src/hooks/usePyodideWorker.test.ts` - Extended unit tests for cancellation functionality
+- `tests/execution-cancellation.spec.ts` - Comprehensive Playwright tests for user cancellation workflows
+
+**Technical Notes:**
+
+- Uses Pyodide's built-in `setInterruptBuffer()` method with `Uint8Array(new SharedArrayBuffer(1))` as specified in user story requirements
+- Main thread signals interruption by setting `buffer[0] = 2` (SIGINT) for immediate cancellation without worker message delays
+- SharedArrayBuffer detection with clear user messaging when immediate cancellation is unavailable
+- KeyboardInterrupt exception handling distinguishes user cancellation from actual Python errors for proper UI state management
+- Interrupt buffer shared across all executions with proper lifecycle management and cleanup
+- Three-state execution model (idle→running→stopping→cancelled/idle) prevents race conditions and provides clear user feedback
+- Backwards compatible fallback uses traditional message-based interruption when SharedArrayBuffer unsupported
+- Security headers required for SharedArrayBuffer only affect development/preview - production deployments need similar configuration
+- Output preservation before cancellation maintains user context while clearly indicating interruption
+- All acceptance criteria from user story specification fully implemented including immediate stopping and proper state management
+
+## PYTHON_CODE_PERSISTENCE
+
+**Status:** ✅ Complete
+
+**Summary:** Implemented persistent storage of Python code in notebook cells across page refreshes and conversation sessions, ensuring code is automatically saved and restored while keeping execution output fresh.
+
+**Implementation Details:**
+
+- Created `src/store/notebookCodeStore.ts` - Zustand store with persist middleware for managing Python code state per notebook ID using localStorage
+- Updated `src/components/NotebookCell.tsx` - Enhanced to integrate with persistence store, automatically loading/saving code based on optional `notebookId` prop
+- Updated `src/components/AiChat.tsx` - Modified to pass current `notebookId` to NotebookCell component for context-aware persistence
+- Store uses selective persistence strategy: code is persisted but execution output/errors are intentionally ephemeral (cleared on refresh)
+- Automatic code loading when `notebookId` is provided, falls back to `initialCode` prop when no notebook context exists
+- Real-time code persistence on every keystroke via `handleCodeChange` callback with debounced localStorage writes
+- Execution result persistence during session but intentionally excluded from localStorage via `partialize` function
+- Backwards compatible design - component works identically without `notebookId` (no persistence) or with it (full persistence)
+- Multiple notebook support with independent code storage keyed by unique notebook identifiers
+- Default code initialization with "Hello, World!" example for new notebook cells
+
+**Testing:**
+
+- Comprehensive unit tests for `notebookCodeStore.ts` covering all CRUD operations, multiple notebook isolation, edge cases, and persistence behavior
+- Extended unit tests for `NotebookCell.tsx` with new persistence functionality including code loading, saving, and notebook context switching
+- Playwright integration tests in `tests/notebook-code-persistence.spec.ts` covering real browser persistence across page refreshes, multiple notebook contexts, and execution output non-persistence verification
+- Tests verify localStorage integration works correctly with selective persistence strategy
+- All tests pass with full coverage of persistence functionality and edge cases
+
+**Files Created/Modified:**
+
+- `src/store/notebookCodeStore.ts` - New Zustand store with persist middleware for code persistence
+- `src/store/notebookCodeStore.test.ts` - Comprehensive unit tests for store functionality
+- `src/components/NotebookCell.tsx` - Enhanced with persistence integration and notebook context awareness
+- `src/components/NotebookCell.test.tsx` - Extended tests for persistence functionality
+- `src/components/AiChat.tsx` - Updated to pass notebook ID context to cells
+- `tests/notebook-code-persistence.spec.ts` - Playwright integration tests for browser persistence
+
+**Technical Notes:**
+
+- Uses Zustand's `persist` middleware with custom `partialize` function to selectively persist only code content, not execution results
+- Store design supports multiple notebooks with `codeCellsByNotebook: Record<string, CodeCell>` structure for proper isolation
+- Automatic cell creation with sensible defaults when accessing non-existent notebook IDs
+- localStorage key "notebook-code-storage" chosen to avoid conflicts with existing storage
+- Execution output and errors intentionally excluded from persistence to ensure fresh execution context on each session
+- Component maintains full backwards compatibility - works with or without notebook ID context
+- `updateCode` and `updateExecutionResult` methods provide granular control over what gets persisted vs session-only
+- Architectural review confirmed changes are minimal, focused, and align with existing Zustand patterns in codebase
+- Follows project guidelines: uses Zustand for state management, maintains backwards compatibility, includes comprehensive testing
+- All acceptance criteria fulfilled: code persists across refreshes, execution output remains ephemeral, multiple notebook support

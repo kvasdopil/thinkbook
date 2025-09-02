@@ -42,7 +42,7 @@ export function AiChat({ currentNotebook }: AiChatProps) {
         <div className="flex-1 overflow-y-auto space-y-6 max-w-7xl mx-auto">
           {/* Jupyter Notebook Cell */}
           <div className="w-full">
-            <NotebookCell />
+            <NotebookCell notebookId={currentNotebook?.id} />
           </div>
 
           <div className="flex justify-end">
@@ -71,7 +71,7 @@ export function AiChat({ currentNotebook }: AiChatProps) {
       <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl">
         {/* Jupyter Notebook Cell */}
         <div className="w-full">
-          <NotebookCell />
+          <NotebookCell notebookId={currentNotebook?.id} />
         </div>
 
         {messages.map((message, index) => (

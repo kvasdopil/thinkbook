@@ -18,8 +18,17 @@ export function usePyodideWorker({
     Map<string, (response: WorkerResponse) => void>
   >(new Map());
   const [isReady, setIsReady] = useState(false);
-  const [isExecuting, setIsExecuting] = useState(false);
+  const [executionState, setExecutionState] = useState<
+    'idle' | 'running' | 'stopping' | 'cancelled'
+  >('idle');
   const [initError, setInitError] = useState<string | null>(null);
+  const [sharedBuffer, setSharedBuffer] = useState<SharedArrayBuffer | null>(
+    null,
+  );
+  const [supportsSharedArrayBuffer, setSupportsSharedArrayBuffer] = useState<
+    boolean | null
+  >(null);
+  const sharedBufferRef = useRef<SharedArrayBuffer | null>(null);
   const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use refs for callbacks to avoid worker recreation on callback changes
@@ -37,6 +46,30 @@ export function usePyodideWorker({
 
     console.log('[usePyodideWorker] Initializing Pyodide worker');
     setInitError(null);
+
+    // Check SharedArrayBuffer support
+    const detectSharedArrayBufferSupport = () => {
+      try {
+        new SharedArrayBuffer(1);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const hasSharedArrayBuffer = detectSharedArrayBufferSupport();
+    setSupportsSharedArrayBuffer(hasSharedArrayBuffer);
+
+    if (hasSharedArrayBuffer) {
+      console.log('[usePyodideWorker] SharedArrayBuffer is supported');
+      const buffer = new SharedArrayBuffer(1);
+      setSharedBuffer(buffer);
+      sharedBufferRef.current = buffer;
+    } else {
+      console.warn(
+        '[usePyodideWorker] SharedArrayBuffer is not supported - immediate cancellation unavailable',
+      );
+    }
 
     try {
       // Set timeout for worker initialization
@@ -79,6 +112,19 @@ export function usePyodideWorker({
           }
           setIsReady(true);
           setInitError(null);
+
+          // Send SharedArrayBuffer to worker if available
+          if (hasSharedArrayBuffer && sharedBufferRef.current) {
+            console.log(
+              '[usePyodideWorker] Sending interrupt buffer to worker',
+            );
+            worker.postMessage({
+              type: 'setInterruptBuffer',
+              id: 'interrupt-buffer',
+              buffer: sharedBufferRef.current,
+            } as WorkerMessage);
+          }
+
           return;
         }
 
@@ -188,7 +234,7 @@ export function usePyodideWorker({
           isComplete: false,
         };
 
-        setIsExecuting(true);
+        setExecutionState('running');
 
         // Add timeout for execution
         const executionTimeout = setTimeout(() => {
@@ -198,7 +244,7 @@ export function usePyodideWorker({
           result.error = 'Execution timeout (30s)';
           result.isComplete = true;
           messageHandlersRef.current.delete(messageId);
-          setIsExecuting(false);
+          setExecutionState('idle');
           resolve(result);
         }, 30000); // 30 second timeout
 
@@ -259,7 +305,20 @@ export function usePyodideWorker({
               }
               result.isComplete = true;
               messageHandlersRef.current.delete(messageId);
-              setIsExecuting(false);
+              setExecutionState('idle');
+              resolve(result);
+              break;
+
+            case 'cancelled':
+              clearTimeout(executionTimeout);
+              console.log(
+                `[usePyodideWorker] Execution cancelled for ${messageId}`,
+              );
+              result.isComplete = true;
+              result.error = 'Execution interrupted by user';
+              messageHandlersRef.current.delete(messageId);
+              setExecutionState('cancelled');
+              onOutputChangeRef.current?.(result.output, result.error);
               resolve(result);
               break;
 
@@ -270,7 +329,7 @@ export function usePyodideWorker({
               );
               result.isComplete = true;
               messageHandlersRef.current.delete(messageId);
-              setIsExecuting(false);
+              setExecutionState('idle');
               resolve(result);
               break;
           }
@@ -295,20 +354,38 @@ export function usePyodideWorker({
 
   const interruptExecution = useCallback(() => {
     console.log('[usePyodideWorker] Interrupting execution');
-    if (workerRef.current && isExecuting) {
-      workerRef.current.postMessage({
-        type: 'interrupt',
-        id: 'interrupt',
-      } as WorkerMessage);
-      setIsExecuting(false);
+    if (workerRef.current && executionState === 'running') {
+      setExecutionState('stopping');
+
+      if (sharedBuffer && supportsSharedArrayBuffer) {
+        // Immediate interrupt via SharedArrayBuffer
+        console.log('[usePyodideWorker] Sending SIGINT via SharedArrayBuffer');
+        const uint8View = new Uint8Array(sharedBuffer);
+        uint8View[0] = 2; // SIGINT signal as per spec
+      } else {
+        // Fallback to message-based interrupt
+        console.log(
+          '[usePyodideWorker] Using fallback message-based interrupt',
+        );
+        workerRef.current.postMessage({
+          type: 'interrupt',
+          id: 'interrupt-fallback',
+        } as WorkerMessage);
+        // For fallback, we directly set to cancelled since we won't get proper cancellation
+        setTimeout(() => {
+          setExecutionState('cancelled');
+        }, 100);
+      }
     }
-  }, [isExecuting]);
+  }, [executionState, sharedBuffer, supportsSharedArrayBuffer]);
 
   return {
     isReady,
-    isExecuting,
+    isExecuting: executionState === 'running' || executionState === 'stopping',
+    executionState,
     executeCode,
     interruptExecution,
     initError,
+    supportsSharedArrayBuffer,
   };
 }

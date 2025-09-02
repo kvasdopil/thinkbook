@@ -17,6 +17,14 @@ class MockWorker {
     }
   }
 
+  // Helper to get the last message ID sent
+  getLastExecutionMessageId(): string {
+    const lastCall = this.postMessage.mock.calls
+      .reverse()
+      .find((call) => call[0]?.type === 'execute');
+    return lastCall?.[0]?.id || 'unknown';
+  }
+
   // Helper method to simulate error
   simulateError(error: ErrorEvent) {
     if (this.onerror) {
@@ -27,6 +35,26 @@ class MockWorker {
 
 // Mock the Worker constructor
 global.Worker = vi.fn(() => new MockWorker()) as unknown as typeof Worker;
+
+// Mock SharedArrayBuffer
+class MockSharedArrayBuffer {
+  constructor(public length: number) {}
+}
+
+// Mock Uint8Array with SharedArrayBuffer
+class MockUint8Array extends Uint8Array {
+  constructor(bufferOrLength: ArrayBuffer | SharedArrayBuffer | number) {
+    if (typeof bufferOrLength === 'number') {
+      super(bufferOrLength);
+    } else {
+      super(
+        bufferOrLength instanceof MockSharedArrayBuffer
+          ? new ArrayBuffer(bufferOrLength.length)
+          : bufferOrLength,
+      );
+    }
+  }
+}
 
 describe('usePyodideWorker', () => {
   let mockWorker: MockWorker;
@@ -346,5 +374,245 @@ describe('usePyodideWorker', () => {
     unmount();
 
     expect(mockWorker.terminate).toHaveBeenCalled();
+  });
+
+  describe('execution cancellation', () => {
+    beforeEach(() => {
+      // Mock SharedArrayBuffer support
+      global.SharedArrayBuffer =
+        MockSharedArrayBuffer as unknown as typeof SharedArrayBuffer;
+      global.Uint8Array = MockUint8Array as typeof Uint8Array;
+    });
+
+    afterEach(() => {
+      // Restore original implementations
+      delete (global as { SharedArrayBuffer?: unknown }).SharedArrayBuffer;
+      global.Uint8Array = Uint8Array;
+    });
+
+    it('detects SharedArrayBuffer support', () => {
+      const { result } = renderHook(() => usePyodideWorker());
+
+      expect(result.current.supportsSharedArrayBuffer).toBe(true);
+    });
+
+    it('detects SharedArrayBuffer unavailability', () => {
+      // Remove SharedArrayBuffer support
+      delete (global as { SharedArrayBuffer?: unknown }).SharedArrayBuffer;
+
+      const { result } = renderHook(() => usePyodideWorker());
+
+      expect(result.current.supportsSharedArrayBuffer).toBe(false);
+    });
+
+    it('sends interrupt buffer to worker when ready with SharedArrayBuffer support', async () => {
+      renderHook(() => usePyodideWorker());
+
+      // Make worker ready
+      act(() => {
+        mockWorker.simulateMessage({ type: 'ready', id: 'init' });
+      });
+
+      // Check that setInterruptBuffer message was sent
+      await waitFor(() => {
+        expect(mockWorker.postMessage).toHaveBeenCalledWith({
+          type: 'setInterruptBuffer',
+          id: 'interrupt-buffer',
+          buffer: expect.any(MockSharedArrayBuffer),
+        });
+      });
+    });
+
+    it('handles execution cancellation with SharedArrayBuffer', async () => {
+      const mockOnOutputChange = vi.fn();
+      const { result } = renderHook(() =>
+        usePyodideWorker({
+          onOutputChange: mockOnOutputChange,
+        }),
+      );
+
+      // Make worker ready first
+      act(() => {
+        mockWorker.simulateMessage({ type: 'ready', id: 'init' });
+      });
+
+      // Start execution
+      act(() => {
+        void result.current.executeCode('while True: pass');
+      });
+
+      expect(result.current.executionState).toBe('running');
+
+      // Interrupt execution
+      act(() => {
+        result.current.interruptExecution();
+      });
+
+      expect(result.current.executionState).toBe('stopping');
+
+      // Simulate cancellation response from worker
+      act(() => {
+        mockWorker.simulateMessage({
+          type: 'cancelled',
+          id: expect.any(String),
+        });
+      });
+
+      expect(result.current.executionState).toBe('cancelled');
+      expect(mockOnOutputChange).toHaveBeenCalledWith(
+        [],
+        'Execution interrupted by user',
+      );
+    });
+
+    it('uses fallback interruption when SharedArrayBuffer unavailable', async () => {
+      // Remove SharedArrayBuffer support
+      delete (global as { SharedArrayBuffer?: unknown }).SharedArrayBuffer;
+
+      const { result } = renderHook(() => usePyodideWorker());
+
+      // Make worker ready first
+      act(() => {
+        mockWorker.simulateMessage({ type: 'ready', id: 'init' });
+      });
+
+      // Start execution
+      act(() => {
+        void result.current.executeCode('while True: pass');
+      });
+
+      expect(result.current.executionState).toBe('running');
+
+      // Interrupt execution
+      act(() => {
+        result.current.interruptExecution();
+      });
+
+      expect(result.current.executionState).toBe('stopping');
+
+      // Check that fallback interrupt message was sent
+      expect(mockWorker.postMessage).toHaveBeenCalledWith({
+        type: 'interrupt',
+        id: 'interrupt-fallback',
+      });
+
+      // Should automatically transition to cancelled state after timeout
+      await waitFor(() => {
+        expect(result.current.executionState).toBe('cancelled');
+      });
+    });
+
+    it('handles race condition between cancellation and natural completion', async () => {
+      const mockOnOutputChange = vi.fn();
+      const { result } = renderHook(() =>
+        usePyodideWorker({
+          onOutputChange: mockOnOutputChange,
+        }),
+      );
+
+      // Make worker ready first
+      act(() => {
+        mockWorker.simulateMessage({ type: 'ready', id: 'init' });
+      });
+
+      // Start execution
+      act(() => {
+        void result.current.executeCode('print("hello")');
+      });
+
+      expect(result.current.executionState).toBe('running');
+
+      // Interrupt execution
+      act(() => {
+        result.current.interruptExecution();
+      });
+
+      expect(result.current.executionState).toBe('stopping');
+
+      // Simulate natural completion before cancellation
+      act(() => {
+        mockWorker.simulateMessage({
+          type: 'complete',
+          id: expect.any(String),
+        });
+      });
+
+      // Should complete normally, not be cancelled
+      expect(result.current.executionState).toBe('idle');
+    });
+
+    it('properly transitions execution states', () => {
+      const { result } = renderHook(() => usePyodideWorker());
+
+      // Initial state
+      expect(result.current.executionState).toBe('idle');
+      expect(result.current.isExecuting).toBe(false);
+
+      // Make worker ready first
+      act(() => {
+        mockWorker.simulateMessage({ type: 'ready', id: 'init' });
+      });
+
+      // Start execution
+      act(() => {
+        void result.current.executeCode('print("hello")');
+      });
+
+      expect(result.current.executionState).toBe('running');
+      expect(result.current.isExecuting).toBe(true);
+
+      // Interrupt
+      act(() => {
+        result.current.interruptExecution();
+      });
+
+      expect(result.current.executionState).toBe('stopping');
+      expect(result.current.isExecuting).toBe(true); // Still executing until cancelled
+
+      // Complete cancellation
+      act(() => {
+        mockWorker.simulateMessage({
+          type: 'cancelled',
+          id: expect.any(String),
+        });
+      });
+
+      expect(result.current.executionState).toBe('cancelled');
+      expect(result.current.isExecuting).toBe(false);
+    });
+
+    it('resets execution state after cancellation', async () => {
+      const { result } = renderHook(() => usePyodideWorker());
+
+      // Make worker ready first
+      act(() => {
+        mockWorker.simulateMessage({ type: 'ready', id: 'init' });
+      });
+
+      // Execute and cancel
+      act(() => {
+        void result.current.executeCode('while True: pass');
+      });
+
+      act(() => {
+        result.current.interruptExecution();
+      });
+
+      act(() => {
+        mockWorker.simulateMessage({
+          type: 'cancelled',
+          id: expect.any(String),
+        });
+      });
+
+      expect(result.current.executionState).toBe('cancelled');
+
+      // Should be able to execute again
+      act(() => {
+        void result.current.executeCode('print("hello")');
+      });
+
+      expect(result.current.executionState).toBe('running');
+    });
   });
 });
