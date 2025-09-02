@@ -21,10 +21,14 @@ export function CodeEditor({
 }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-  const isInitialized = useRef(false);
+  const onChangeRef = useRef(onChange);
 
+  // Keep onChange callback reference stable
+  onChangeRef.current = onChange;
+
+  // Initialize editor only once
   useEffect(() => {
-    if (!containerRef.current || isInitialized.current) {
+    if (!containerRef.current || editorRef.current) {
       return;
     }
 
@@ -57,39 +61,54 @@ export function CodeEditor({
     });
 
     editorRef.current = editor;
-    isInitialized.current = true;
 
     // Listen for content changes
     const disposable = editor.onDidChangeModelContent(() => {
       const currentValue = editor.getValue();
-      onChange(currentValue);
+      onChangeRef.current(currentValue);
     });
 
     // Cleanup function
     return () => {
       disposable.dispose();
       editor.dispose();
-      isInitialized.current = false;
+      editorRef.current = null;
     };
-  }, [language, onChange, placeholder, readOnly, value]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Initialize only once - props handled in separate effects
 
-  // Update editor value when prop changes
+  // Update editor value when prop changes (avoid setting if it's the same)
   useEffect(() => {
     if (editorRef.current && editorRef.current.getValue() !== value) {
       const position = editorRef.current.getPosition();
+      const selection = editorRef.current.getSelection();
+
+      // Set value without triggering change event
       editorRef.current.setValue(value);
+
+      // Restore cursor position and selection
       if (position) {
         editorRef.current.setPosition(position);
+      }
+      if (selection) {
+        editorRef.current.setSelection(selection);
       }
     }
   }, [value]);
 
-  // Update readonly state
+  // Update editor options when props change
   useEffect(() => {
     if (editorRef.current) {
-      editorRef.current.updateOptions({ readOnly });
+      editorRef.current.updateOptions({
+        readOnly,
+      });
+      // Update language model if needed
+      const model = editorRef.current.getModel();
+      if (model && model.getLanguageId() !== language) {
+        monaco.editor.setModelLanguage(model, language);
+      }
     }
-  }, [readOnly]);
+  }, [readOnly, language]);
 
   return (
     <div

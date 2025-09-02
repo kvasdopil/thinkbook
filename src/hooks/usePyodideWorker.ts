@@ -1,23 +1,9 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
-
-interface WorkerMessage {
-  type: 'init' | 'execute' | 'interrupt';
-  id: string;
-  code?: string;
-}
-
-interface WorkerResponse {
-  type: 'ready' | 'output' | 'error' | 'complete';
-  id: string;
-  content?: string;
-  error?: string;
-}
-
-interface ExecutionResult {
-  output: string[];
-  error: string | null;
-  isComplete: boolean;
-}
+import type {
+  WorkerMessage,
+  WorkerResponse,
+  ExecutionResult,
+} from '../types/worker';
 
 interface UsePyodideWorkerOptions {
   onOutputChange?: (output: string[], error: string | null) => void;
@@ -222,10 +208,35 @@ export function usePyodideWorker({
             `[usePyodideWorker] Received response for ${messageId}:`,
             response.type,
           );
-          clearTimeout(executionTimeout);
 
           switch (response.type) {
+            case 'out':
+              if (response.value) {
+                console.log(
+                  `[usePyodideWorker] Adding stdout for ${messageId}:`,
+                  response.value,
+                );
+                result.output.push(response.value);
+                onOutputChangeRef.current?.(result.output, result.error);
+              }
+              // Don't clear timeout or resolve - wait for more output or complete
+              break;
+
+            case 'err':
+              if (response.value) {
+                console.log(
+                  `[usePyodideWorker] Adding stderr for ${messageId}:`,
+                  response.value,
+                );
+                // Treat stderr as part of output for display purposes
+                result.output.push(response.value);
+                onOutputChangeRef.current?.(result.output, result.error);
+              }
+              // Don't clear timeout or resolve - wait for more output or complete
+              break;
+
             case 'output':
+              // Legacy output message - keep for compatibility
               if (response.content) {
                 console.log(
                   `[usePyodideWorker] Adding output for ${messageId}:`,
@@ -237,6 +248,7 @@ export function usePyodideWorker({
               break;
 
             case 'error':
+              clearTimeout(executionTimeout);
               if (response.error) {
                 console.error(
                   `[usePyodideWorker] Execution error for ${messageId}:`,
@@ -252,6 +264,7 @@ export function usePyodideWorker({
               break;
 
             case 'complete':
+              clearTimeout(executionTimeout);
               console.log(
                 `[usePyodideWorker] Execution completed for ${messageId}`,
               );

@@ -396,3 +396,52 @@
 - ARIA accessibility features including proper button labeling and loading indicators
 - Follows established architectural patterns with proper separation of concerns between editor, worker, and UI components
 - All acceptance criteria from user story specification fully implemented including worker stability requirements
+
+## 0014.STREAMING_OUTPUT
+
+**Status:** ✅ Complete
+
+**Summary:** Implemented real-time streaming output for Python execution, allowing users to see print() statements and output appear immediately as it's generated, rather than waiting for script completion.
+
+**Implementation Details:**
+
+- Created `src/types/worker.ts` - Shared TypeScript interfaces for worker communication with new streaming message types (`out`, `err`) alongside legacy types for backward compatibility
+- Enhanced `src/workers/pyodideWorker.ts` - Modified executeCode function to override Python's `print()` and `sys.stderr.write` functions with JavaScript callbacks that immediately post messages to main thread
+- Updated `src/hooks/usePyodideWorker.ts` - Extended message handler to process new streaming message types (`out`/`err`) while maintaining compatibility with existing `output` type
+- Enhanced `src/components/NotebookCell.tsx` - Added `data-testid` for testing; component already supported streaming via `onOutputChange` callback pattern
+- Python function override implementation uses `pyodide.globals.set()` to expose JavaScript streaming callbacks to Python environment
+- Streaming setup creates temporary print/stderr functions that call JavaScript callbacks immediately when invoked
+- Original Python functions properly restored in finally block to prevent side effects on subsequent executions
+- Real-time output accumulation with progressive display as each print() statement executes
+- Mixed stdout/stderr handling routes both streams to output display for unified user experience
+- Message routing using `currentMessageId` context to ensure output reaches correct execution instance
+
+**Testing:**
+
+- Comprehensive unit tests for `usePyodideWorker.ts` covering new streaming message types, output accumulation, and mixed stdout/stderr scenarios
+- Playwright integration tests in `tests/streaming-output.spec.ts` covering real-time output display, progressive streaming with delays, execution state management, and error handling during streaming
+- Tests verify streaming works with time.sleep() delays, showing output appears progressively rather than all at completion
+- Error handling tests confirm streaming stops properly when exceptions occur and button states return to normal
+- Tests include mixed stdout/stderr scenarios and verify proper output accumulation and display
+
+**Files Created/Modified:**
+
+- `src/types/worker.ts` - New shared worker communication types with streaming message support
+- `src/workers/pyodideWorker.ts` - Enhanced with Python function override for real-time streaming output
+- `src/hooks/usePyodideWorker.ts` - Updated message handling for new streaming types with backward compatibility
+- `src/components/NotebookCell.tsx` - Added data-testid attribute for testing (functionality already supported streaming)
+- `src/hooks/usePyodideWorker.test.ts` - Extended unit tests for streaming functionality
+- `tests/streaming-output.spec.ts` - Comprehensive Playwright tests for streaming behavior
+
+**Technical Notes:**
+
+- Uses JavaScript callbacks via `pyodide.globals.set()` to avoid DataCloneError issues from direct `js.postMessage()` calls in Python
+- Python function override pattern captures original functions, replaces with streaming versions, and restores in finally block
+- Message types follow user story specification: `{ type: "out" | "err", value: string }` for flexible rendering
+- Streaming implementation preserves existing output buffering behavior (no maximum log size, append indefinitely)
+- Worker communication uses unique message IDs to route streaming output to correct execution context
+- Backward compatibility maintained with legacy `output` message type for existing functionality
+- Proper cleanup and restoration of Python environment prevents infinite recursion and function conflicts
+- All streaming output appears immediately during `print()` execution, not after script completion
+- Error handling during streaming maintains proper execution button states and user feedback
+- Follows established architectural patterns for worker communication and React component integration

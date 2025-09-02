@@ -1,11 +1,14 @@
 /// <reference lib="webworker" />
 
+import type { WorkerMessage, WorkerResponse } from '../types/worker';
+
 declare const self: DedicatedWorkerGlobalScope;
 
 interface PyodideInterface {
   runPython: (code: string) => unknown;
   globals: {
     set: (name: string, value: unknown) => void;
+    get: (name: string) => unknown;
   };
 }
 
@@ -21,19 +24,6 @@ declare global {
 let pyodide: PyodideInterface | null = null;
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
-
-interface WorkerMessage {
-  type: 'init' | 'execute' | 'interrupt';
-  id: string;
-  code?: string;
-}
-
-interface WorkerResponse {
-  type: 'ready' | 'output' | 'error' | 'complete';
-  id: string;
-  content?: string;
-  error?: string;
-}
 
 // Initialize Pyodide
 async function initializePyodide(): Promise<void> {
@@ -141,7 +131,7 @@ async function initializePyodide(): Promise<void> {
   return initPromise;
 }
 
-// Execute Python code
+// Execute Python code with streaming output
 async function executeCode(code: string, messageId: string): Promise<void> {
   console.log(`[PyodideWorker] Executing code for message ${messageId}:`, code);
 
@@ -161,9 +151,72 @@ async function executeCode(code: string, messageId: string): Promise<void> {
       globalThis as typeof globalThis & { currentMessageId: string }
     ).currentMessageId = messageId;
 
+    console.log(
+      `[PyodideWorker] Setting up streaming output for message ${messageId}`,
+    );
+
+    // Set up JavaScript callbacks for streaming output
+    const streamOut = (text: string) => {
+      self.postMessage({
+        type: 'out',
+        id: messageId,
+        value: text,
+      } as WorkerResponse);
+    };
+
+    const streamErr = (text: string) => {
+      self.postMessage({
+        type: 'err',
+        id: messageId,
+        value: text,
+      } as WorkerResponse);
+    };
+
+    // Make streaming functions available to Python
+    pyodide.globals.set('_stream_out', streamOut);
+    pyodide.globals.set('_stream_err', streamErr);
+
+    // Override Python print() and sys.stderr with streaming versions
+    const streamingSetup = `
+import sys
+import builtins
+
+# Store original functions
+_original_print = builtins.print
+_original_stderr_write = sys.stderr.write
+
+# Define streaming print function
+def _streaming_print(*args, **kwargs):
+    # Extract all arguments and construct the output
+    sep = kwargs.get('sep', ' ')
+    end = kwargs.get('end', '\\n')
+    file = kwargs.get('file', sys.stdout)
+    
+    # Convert args to strings and join with separator
+    output = sep.join(str(arg) for arg in args) + end
+    
+    # Route to appropriate stream
+    if file == sys.stderr:
+        _stream_err(output)
+    else:
+        _stream_out(output)
+
+# Define streaming stderr write function
+def _streaming_stderr_write(text):
+    _stream_err(text)
+    return len(text)  # Return number of characters written
+
+# Override built-in functions
+builtins.print = _streaming_print
+sys.stderr.write = _streaming_stderr_write
+`;
+
+    // Set up streaming for this execution
+    pyodide.runPython(streamingSetup);
+
     console.log(`[PyodideWorker] Running Python code for message ${messageId}`);
 
-    // Execute the code
+    // Execute the user code
     const result = pyodide.runPython(code);
 
     console.log(
@@ -171,7 +224,7 @@ async function executeCode(code: string, messageId: string): Promise<void> {
       result,
     );
 
-    // If the result is not None or undefined, print it
+    // If the result is not None or undefined, send it as output
     if (
       result !== undefined &&
       result !== null &&
@@ -179,11 +232,19 @@ async function executeCode(code: string, messageId: string): Promise<void> {
     ) {
       console.log(`[PyodideWorker] Sending result output for ${messageId}`);
       self.postMessage({
-        type: 'output',
+        type: 'out',
         id: messageId,
-        content: String(result),
+        value: String(result) + '\n',
       } as WorkerResponse);
     }
+
+    // Restore original functions
+    const cleanup = `
+builtins.print = _original_print
+sys.stderr.write = _original_stderr_write
+del _streaming_print, _streaming_stderr_write, _original_print, _original_stderr_write
+`;
+    pyodide.runPython(cleanup);
 
     // Signal completion
     console.log(`[PyodideWorker] Execution completed for ${messageId}`);
@@ -193,6 +254,20 @@ async function executeCode(code: string, messageId: string): Promise<void> {
     } as WorkerResponse);
   } catch (error) {
     console.error(`[PyodideWorker] Execution error for ${messageId}:`, error);
+
+    // Try to restore original functions in case of error
+    try {
+      pyodide?.runPython(`
+try:
+    builtins.print = _original_print
+    sys.stderr.write = _original_stderr_write
+except:
+    pass
+`);
+    } catch {
+      // Ignore cleanup errors
+    }
+
     self.postMessage({
       type: 'error',
       id: messageId,

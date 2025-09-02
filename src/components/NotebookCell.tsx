@@ -53,7 +53,10 @@ export function NotebookCell({
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+    <div
+      className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm"
+      data-testid="notebook-cell"
+    >
       {/* Cell Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
         <div className="flex items-center space-x-2">

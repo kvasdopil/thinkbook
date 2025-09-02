@@ -89,16 +89,180 @@ describe('usePyodideWorker', () => {
       void result.current.executeCode('print("hello")');
     });
 
+    // Get the messageId that was sent
+    const executeCall = mockWorker.postMessage.mock.calls.find(
+      (call) => call[0].type === 'execute',
+    );
+    const messageId = executeCall![0].id;
+
     // Simulate output from worker
     act(() => {
       mockWorker.simulateMessage({
         type: 'output',
-        id: expect.any(String),
+        id: messageId,
         content: 'hello\\n',
       });
     });
 
     expect(mockOnOutputChange).toHaveBeenCalledWith(['hello\\n'], null);
+  });
+
+  it('handles streaming output with "out" message type', async () => {
+    const mockOnOutputChange = vi.fn();
+    const { result } = renderHook(() =>
+      usePyodideWorker({
+        onOutputChange: mockOnOutputChange,
+      }),
+    );
+
+    // Make worker ready first
+    act(() => {
+      mockWorker.simulateMessage({ type: 'ready', id: 'init' });
+    });
+
+    // Execute code
+    act(() => {
+      void result.current.executeCode('print("hello")');
+    });
+
+    // Get the messageId that was sent
+    const executeCall = mockWorker.postMessage.mock.calls.find(
+      (call) => call[0].type === 'execute',
+    );
+    const messageId = executeCall![0].id;
+
+    // Simulate streaming stdout from worker
+    act(() => {
+      mockWorker.simulateMessage({
+        type: 'out',
+        id: messageId,
+        value: 'hello\\n',
+      });
+    });
+
+    expect(mockOnOutputChange).toHaveBeenCalledWith(['hello\\n'], null);
+  });
+
+  it('handles streaming error output with "err" message type', async () => {
+    const mockOnOutputChange = vi.fn();
+    const { result } = renderHook(() =>
+      usePyodideWorker({
+        onOutputChange: mockOnOutputChange,
+      }),
+    );
+
+    // Make worker ready first
+    act(() => {
+      mockWorker.simulateMessage({ type: 'ready', id: 'init' });
+    });
+
+    // Execute code
+    act(() => {
+      void result.current.executeCode(
+        'import sys; print("error", file=sys.stderr)',
+      );
+    });
+
+    // Simulate streaming stderr from worker
+    act(() => {
+      mockWorker.simulateMessage({
+        type: 'err',
+        id: expect.any(String),
+        value: 'error\\n',
+      });
+    });
+
+    expect(mockOnOutputChange).toHaveBeenCalledWith(['error\\n'], null);
+  });
+
+  it('accumulates multiple streaming output messages', async () => {
+    const mockOnOutputChange = vi.fn();
+    const { result } = renderHook(() =>
+      usePyodideWorker({
+        onOutputChange: mockOnOutputChange,
+      }),
+    );
+
+    // Make worker ready first
+    act(() => {
+      mockWorker.simulateMessage({ type: 'ready', id: 'init' });
+    });
+
+    // Execute code
+    act(() => {
+      void result.current.executeCode('print("line1")\\nprint("line2")');
+    });
+
+    // Simulate first streaming output
+    act(() => {
+      mockWorker.simulateMessage({
+        type: 'out',
+        id: expect.any(String),
+        value: 'line1\\n',
+      });
+    });
+
+    expect(mockOnOutputChange).toHaveBeenCalledWith(['line1\\n'], null);
+
+    // Simulate second streaming output
+    act(() => {
+      mockWorker.simulateMessage({
+        type: 'out',
+        id: expect.any(String),
+        value: 'line2\\n',
+      });
+    });
+
+    expect(mockOnOutputChange).toHaveBeenCalledWith(
+      ['line1\\n', 'line2\\n'],
+      null,
+    );
+  });
+
+  it('handles mixed stdout and stderr streaming', async () => {
+    const mockOnOutputChange = vi.fn();
+    const { result } = renderHook(() =>
+      usePyodideWorker({
+        onOutputChange: mockOnOutputChange,
+      }),
+    );
+
+    // Make worker ready first
+    act(() => {
+      mockWorker.simulateMessage({ type: 'ready', id: 'init' });
+    });
+
+    // Execute code
+    act(() => {
+      void result.current.executeCode(
+        'print("stdout")\\nimport sys; print("stderr", file=sys.stderr)',
+      );
+    });
+
+    // Simulate stdout
+    act(() => {
+      mockWorker.simulateMessage({
+        type: 'out',
+        id: expect.any(String),
+        value: 'stdout\\n',
+      });
+    });
+
+    expect(mockOnOutputChange).toHaveBeenCalledWith(['stdout\\n'], null);
+
+    // Simulate stderr
+    act(() => {
+      mockWorker.simulateMessage({
+        type: 'err',
+        id: expect.any(String),
+        value: 'stderr\\n',
+      });
+    });
+
+    expect(mockOnOutputChange).toHaveBeenCalledWith(
+      ['stdout\\n', 'stderr\\n'],
+      null,
+    );
   });
 
   it('handles execution errors correctly', async () => {
