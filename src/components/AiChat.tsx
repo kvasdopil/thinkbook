@@ -40,7 +40,7 @@ export function AiChat({ currentNotebook }: AiChatProps) {
   if (!hasApiKey) {
     return (
       <div className="flex flex-col h-full p-4 flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto space-y-6 max-w-7xl mx-auto">
+        <div className="flex-1 overflow-y-auto space-y-6 max-w-7xl min-w-[40rem] mx-auto">
           {/* Jupyter Notebook Cell */}
           <div className="w-full">
             <NotebookCell notebookId={currentNotebook?.id} />
@@ -57,7 +57,7 @@ export function AiChat({ currentNotebook }: AiChatProps) {
         </div>
 
         <footer className="border-t border-gray-200 bg-white p-4">
-          <div className="max-w-7xl mx-auto relative">
+          <div className="max-w-7xl min-w-[40rem] mx-auto relative">
             <div className="text-center text-gray-500 text-sm">
               Configure your API key to start chatting
             </div>
@@ -69,7 +69,7 @@ export function AiChat({ currentNotebook }: AiChatProps) {
 
   return (
     <div className="flex flex-col h-full items-center flex-1 overflow-hidden">
-      <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl">
+      <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl min-w-[40rem]">
         {/* Jupyter Notebook Cell */}
         <div className="w-full">
           <NotebookCell notebookId={currentNotebook?.id} />
@@ -107,7 +107,7 @@ export function AiChat({ currentNotebook }: AiChatProps) {
       </div>
 
       <footer className="border-t border-gray-200 bg-white p-4 w-full flex items-center justify-center">
-        <div className="max-w-7xl relative flex-1">
+        <div className="max-w-7xl min-w-[40rem] relative flex-1">
           <ChatInput
             onSendMessage={sendMessage}
             disabled={isLoading}

@@ -19,7 +19,7 @@ export function usePyodideWorker({
   >(new Map());
   const [isReady, setIsReady] = useState(false);
   const [executionState, setExecutionState] = useState<
-    'idle' | 'running' | 'stopping' | 'cancelled'
+    'idle' | 'running' | 'stopping' | 'cancelled' | 'complete' | 'failed'
   >('idle');
   const [initError, setInitError] = useState<string | null>(null);
   const [sharedBuffer, setSharedBuffer] = useState<SharedArrayBuffer | null>(
@@ -244,7 +244,7 @@ export function usePyodideWorker({
           result.error = 'Execution timeout (30s)';
           result.isComplete = true;
           messageHandlersRef.current.delete(messageId);
-          setExecutionState('idle');
+          setExecutionState('failed');
           resolve(result);
         }, 30000); // 30 second timeout
 
@@ -305,7 +305,7 @@ export function usePyodideWorker({
               }
               result.isComplete = true;
               messageHandlersRef.current.delete(messageId);
-              setExecutionState('idle');
+              setExecutionState('failed');
               resolve(result);
               break;
 
@@ -329,7 +329,7 @@ export function usePyodideWorker({
               );
               result.isComplete = true;
               messageHandlersRef.current.delete(messageId);
-              setExecutionState('idle');
+              setExecutionState('complete');
               resolve(result);
               break;
           }

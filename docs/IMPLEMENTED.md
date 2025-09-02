@@ -543,3 +543,55 @@
 - Architectural review confirmed changes are minimal, focused, and align with existing Zustand patterns in codebase
 - Follows project guidelines: uses Zustand for state management, maintains backwards compatibility, includes comprehensive testing
 - All acceptance criteria fulfilled: code persists across refreshes, execution output remains ephemeral, multiple notebook support
+
+## 0016.CODE_CELL_TOGGLE_AND_STATUS
+
+**Status:** ✅ Complete
+
+**Summary:** Implemented code cell toggle and status functionality allowing users to collapse/expand code editors with eye icons, display execution status indicators with colors and icons, and show top-level comments as cell titles when collapsed.
+
+**Implementation Details:**
+
+- Enhanced `src/components/NotebookCell.tsx` - Implemented dual state rendering (collapsed/expanded) with visibility toggle, status indicators for all execution states, and comment extraction utility
+- Updated `src/hooks/usePyodideWorker.ts` - Extended execution states to include `complete` and `failed` states alongside existing `idle`, `running`, `stopping`, `cancelled` states
+- Added comment extraction utility function to parse Python top-level comments for use as cell titles in collapsed state
+- Default state: code editor hidden with compact view showing status button, extracted title, and eye icon toggle button
+- Status button combines execution action (Run/Stop) with visual status indicator using color-coded backgrounds and icons
+- Status states mapped to appropriate colors: idle (gray), running (blue with spinner), complete (green with check), failed (red with warning), cancelled (gray with times), stopping (yellow with spinner)
+- Collapsed state displays as inline-flex compact component with max-width constraint for mobile responsiveness
+- Expanded state shows full editor interface with traditional header layout and separate run/stop buttons
+- Smooth transitions between states using CSS `transition-all duration-200` classes
+- Eye icon toggles between `FaRegEye` (show) and `FaRegEyeSlash` (hide) based on current visibility state
+- Top-level comment extraction uses regex to find first `#` comment and strip formatting for clean title display
+- Falls back to "Python Code" title when no comment is available in the code
+- Full accessibility support with proper ARIA labels, keyboard navigation, and screen reader compatibility
+
+**Testing:**
+
+- Comprehensive unit tests for `NotebookCell.tsx` covering visibility toggle functionality, status indicator rendering, comment extraction, and accessibility features
+- Updated all existing tests to work with new collapsed-by-default behavior
+- Tests cover all execution states, proper icon rendering, keyboard navigation, and responsive design classes
+- Playwright integration tests in `tests/code-cell-toggle-status.spec.ts` covering complete user workflows including toggle interactions, status transitions, mobile viewport testing, and accessibility verification
+- Tests verify collapsed/expanded state transitions, comment extraction display, execution from collapsed state, and keyboard accessibility
+- All tests pass with comprehensive coverage of new toggle and status functionality
+
+**Files Created/Modified:**
+
+- `src/components/NotebookCell.tsx` - Major enhancement with dual state rendering, status indicators, and comment extraction
+- `src/components/NotebookCell.test.tsx` - Updated tests for new functionality with comprehensive coverage
+- `src/hooks/usePyodideWorker.ts` - Extended execution states to include `complete` and `failed` states
+- `tests/code-cell-toggle-status.spec.ts` - New Playwright tests for end-to-end toggle and status functionality
+
+**Technical Notes:**
+
+- Uses react-icons `FaRegEye`/`FaRegEyeSlash` for toggle buttons and state-appropriate icons (`FaCheck`, `FaExclamationTriangle`, `FaTimes`, etc.) for status indicators
+- Comment extraction utility handles various Python comment formats with whitespace-aware regex parsing
+- Status button combines functionality (clickable run/stop action) with visual status indication through dynamic styling
+- Execution state management properly transitions between `idle` → `running` → `complete`/`failed`/`cancelled` for accurate status display
+- CSS transitions provide smooth visual feedback during state changes without disrupting user experience
+- Component maintains backward compatibility while adding new toggle functionality as enhancement
+- Mobile responsiveness ensured with `max-w-sm` constraint on collapsed state and proper touch targets
+- Accessibility features include proper button roles, ARIA labels, keyboard navigation support, and screen reader compatibility
+- Default hidden state follows user story specification while maintaining easy discovery through clear toggle affordances
+- Follows established architectural patterns with minimal changes to existing codebase structure
+- All acceptance criteria from user story specification fully implemented including default hidden state, status colors, hover actions, and responsive design

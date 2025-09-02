@@ -1,0 +1,604 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+
+    <style>
+      ::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              primary: {
+                50: '#f0f9ff',
+                100: '#e0f2fe',
+                200: '#bae6fd',
+                300: '#7dd3fc',
+                400: '#38bdf8',
+                500: '#0ea5e9',
+                600: '#0284c7',
+                700: '#0369a1',
+                800: '#075985',
+                900: '#0c4a6e',
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&amp;display=swap"
+    />
+    <style>
+      body {
+        font-family: 'Inter', sans-serif !important;
+      }
+
+      /* Preserve Font Awesome icons */
+      .fa,
+      .fas,
+      .far,
+      .fal,
+      .fab {
+        font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Brands' !important;
+      }
+    </style>
+    <style>
+      .highlighted-section {
+        outline: 2px solid #3f20fb;
+        background-color: rgba(63, 32, 251, 0.1);
+      }
+      .edit-button {
+        position: absolute;
+        z-index: 1000;
+      }
+      ::-webkit-scrollbar {
+        display: none;
+      }
+      html,
+      body {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 font-sans">
+    <div id="chat-container" class="flex flex-col h-screen">
+      <header id="header" class="border-b border-gray-200 bg-white p-4">
+        <div class="max-w-7xl mx-auto">
+          <h1
+            id="document-title"
+            class="text-2xl font-bold outline-none"
+            contenteditable="true"
+          >
+            AI Chat Assistant
+          </h1>
+        </div>
+      </header>
+      <main id="chat-messages" class="flex-1 overflow-y-auto p-4">
+        <div class="max-w-7xl mx-auto space-y-6">
+          <div id="message-1" class="flex justify-end">
+            <div class="bg-primary-600 text-white rounded-lg p-4 max-w-3xl">
+              <p>
+                Can you analyze our quarterly revenue data and show me both a
+                trend graph and detailed breakdown table?
+              </p>
+            </div>
+          </div>
+          <div id="message-2" class="space-y-6 max-w-full">
+            <div class="flex items-center space-x-2">
+              <p>
+                I'll analyze your quarterly revenue data and provide both visual
+                and tabular insights. Let me process the data:
+              </p>
+              <div class="flex items-center space-x-1">
+                <div class="tool-call-icon relative group">
+                  <i
+                    class="fa-solid fa-database text-gray-400 hover:text-gray-600 text-sm cursor-help"
+                  ></i>
+                  <div
+                    class="tool-call-tooltip absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                  >
+                    database_query
+                  </div>
+                </div>
+                <div class="tool-call-icon relative group">
+                  <i
+                    class="fa-solid fa-chart-line text-gray-400 hover:text-gray-600 text-sm cursor-help"
+                  ></i>
+                  <div
+                    class="tool-call-tooltip absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                  >
+                    create_chart
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              id="expanded-code-editor"
+              class="w-full bg-white border border-gray-200 rounded-lg overflow-hidden"
+            >
+              <div
+                class="flex items-center justify-between bg-gray-50 px-4 py-3 border-b border-gray-200"
+              >
+                <div class="flex items-center space-x-3">
+                  <button
+                    class="status-btn w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs hover:bg-green-200 transition-colors"
+                    data-status="ok"
+                  >
+                    <i class="fa-solid fa-check"></i>
+                  </button>
+                  <span class="text-sm font-medium text-gray-700"
+                    >Extract quarterly revenue data</span
+                  >
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button
+                    class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600 transition-colors"
+                  >
+                    <i class="fa-solid fa-play mr-1"></i>Run
+                  </button>
+                  <button
+                    class="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <i class="fa-solid fa-compress text-xs"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="p-4">
+                <div class="bg-gray-900 rounded-lg p-4 font-mono text-sm">
+                  <div class="text-gray-400 mb-2">
+                    # Query quarterly revenue data
+                  </div>
+                  <div class="text-blue-300">import</div>
+                  <div class="text-white inline">pandas</div>
+                  <div class="text-blue-300 inline">as</div>
+                  <div class="text-white inline">pd</div>
+                  <br />
+                  <div class="text-blue-300">import</div>
+                  <div class="text-white inline">sqlite3</div>
+                  <br /><br />
+                  <div class="text-gray-400"># Connect to database</div>
+                  <div class="text-white">
+                    conn = sqlite3.connect(<span class="text-green-300"
+                      >'revenue.db'</span
+                    >)
+                  </div>
+                  <br /><br />
+                  <div class="text-gray-400"># Query quarterly data</div>
+                  <div class="text-white">
+                    query = <span class="text-green-300">"""</span>
+                  </div>
+                  <div class="text-green-300 ml-4">
+                    SELECT quarter, revenue, growth_rate, target
+                  </div>
+                  <div class="text-green-300 ml-4">FROM quarterly_revenue</div>
+                  <div class="text-green-300 ml-4">WHERE year &gt;= 2023</div>
+                  <div class="text-green-300 ml-4">ORDER BY quarter_date</div>
+                  <div class="text-green-300">"""</div>
+                  <br /><br />
+                  <div class="text-white">
+                    df = pd.read_sql_query(query, conn)
+                  </div>
+                  <div class="text-blue-300">print</div>
+                  <div class="text-white">(</div>
+                  <div class="text-green-300">
+                    "Data extracted successfully"
+                  </div>
+                  <div class="text-white">)</div>
+                  <div class="text-blue-300">print</div>
+                  <div class="text-white">(</div>
+                  <div class="text-green-300">
+                    f"Retrieved {len(df)} quarters"
+                  </div>
+                  <div class="text-white">)</div>
+                </div>
+              </div>
+            </div>
+            <div
+              id="code-output-1"
+              class="bg-gray-900 text-gray-100 rounded-lg p-3 font-mono text-sm"
+            >
+              <div class="text-green-400">✓ Connected to database</div>
+              <div class="text-blue-300">Query executed successfully</div>
+              <div class="text-gray-300">
+                Retrieved 6 quarters of revenue data
+              </div>
+              <div class="text-white">Data extracted successfully</div>
+              <div class="text-white">Retrieved 6 quarters</div>
+            </div>
+            <div class="flex items-start space-x-3">
+              <div
+                id="code-block-2"
+                class="inline-flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2 max-w-sm"
+              >
+                <button
+                  class="status-btn w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-3 text-xs hover:bg-green-200 transition-colors"
+                  data-status="ok"
+                >
+                  <i class="fa-solid fa-check"></i>
+                </button>
+                <span class="text-sm font-medium text-gray-700 flex-1 truncate"
+                  >Calculate growth metrics</span
+                >
+                <button
+                  class="expand-btn ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <i class="fa-solid fa-expand text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div
+              id="code-output-2"
+              class="ml-9 bg-gray-900 text-gray-100 rounded-lg p-3 font-mono text-sm"
+            >
+              <div class="text-yellow-400">Computing growth rates...</div>
+              <div class="text-green-400">✓ Q-o-Q growth: 7.3% avg</div>
+              <div class="text-green-400">✓ Y-o-Y growth: 49.0%</div>
+            </div>
+            <p>Here's your quarterly revenue analysis:</p>
+            <div
+              id="revenue-chart"
+              class="w-full h-96 bg-white p-4 rounded-lg border border-gray-200"
+            ></div>
+            <div class="overflow-x-auto">
+              <table
+                id="revenue-table"
+                class="min-w-full bg-white border border-gray-200 rounded-lg"
+              >
+                <thead>
+                  <tr class="bg-gray-50">
+                    <th
+                      class="py-3 px-4 text-left border-b border-gray-200 font-medium text-gray-700"
+                    >
+                      Quarter
+                    </th>
+                    <th
+                      class="py-3 px-4 text-left border-b border-gray-200 font-medium text-gray-700"
+                    >
+                      Revenue
+                    </th>
+                    <th
+                      class="py-3 px-4 text-left border-b border-gray-200 font-medium text-gray-700"
+                    >
+                      Growth Rate
+                    </th>
+                    <th
+                      class="py-3 px-4 text-left border-b border-gray-200 font-medium text-gray-700"
+                    >
+                      Target
+                    </th>
+                    <th
+                      class="py-3 px-4 text-left border-b border-gray-200 font-medium text-gray-700"
+                    >
+                      Performance
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-3 px-4 border-b border-gray-200 font-medium">
+                      Q1 2023
+                    </td>
+                    <td class="py-3 px-4 border-b border-gray-200">
+                      $2,450,000
+                    </td>
+                    <td
+                      class="py-3 px-4 border-b border-gray-200 text-green-600"
+                    >
+                      +15.2%
+                    </td>
+                    <td class="py-3 px-4 border-b border-gray-200">
+                      $2,300,000
+                    </td>
+                    <td
+                      class="py-3 px-4 border-b border-gray-200 text-green-600"
+                    >
+                      +6.5%
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 border-b border-gray-200 font-medium">
+                      Q2 2023
+                    </td>
+                    <td class="py-3 px-4 border-b border-gray-200">
+                      $2,680,000
+                    </td>
+                    <td
+                      class="py-3 px-4 border-b border-gray-200 text-green-600"
+                    >
+                      +9.4%
+                    </td>
+                    <td class="py-3 px-4 border-b border-gray-200">
+                      $2,500,000
+                    </td>
+                    <td
+                      class="py-3 px-4 border-b border-gray-200 text-green-600"
+                    >
+                      +7.2%
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 border-b border-gray-200 font-medium">
+                      Q3 2023
+                    </td>
+                    <td class="py-3 px-4 border-b border-gray-200">
+                      $2,920,000
+                    </td>
+                    <td
+                      class="py-3 px-4 border-b border-gray-200 text-green-600"
+                    >
+                      +8.9%
+                    </td>
+                    <td class="py-3 px-4 border-b border-gray-200">
+                      $2,750,000
+                    </td>
+                    <td
+                      class="py-3 px-4 border-b border-gray-200 text-green-600"
+                    >
+                      +6.2%
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 border-b border-gray-200 font-medium">
+                      Q4 2023
+                    </td>
+                    <td class="py-3 px-4 border-b border-gray-200">
+                      $3,150,000
+                    </td>
+                    <td
+                      class="py-3 px-4 border-b border-gray-200 text-green-600"
+                    >
+                      +7.9%
+                    </td>
+                    <td class="py-3 px-4 border-b border-gray-200">
+                      $3,000,000
+                    </td>
+                    <td
+                      class="py-3 px-4 border-b border-gray-200 text-green-600"
+                    >
+                      +5.0%
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 border-b border-gray-200 font-medium">
+                      Q1 2024
+                    </td>
+                    <td class="py-3 px-4 border-b border-gray-200">
+                      $3,380,000
+                    </td>
+                    <td
+                      class="py-3 px-4 border-b border-gray-200 text-green-600"
+                    >
+                      +7.3%
+                    </td>
+                    <td class="py-3 px-4 border-b border-gray-200">
+                      $3,200,000
+                    </td>
+                    <td
+                      class="py-3 px-4 border-b border-gray-200 text-green-600"
+                    >
+                      +5.6%
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 font-medium">Q2 2024</td>
+                    <td class="py-3 px-4">$3,650,000</td>
+                    <td class="py-3 px-4 text-green-600">+8.0%</td>
+                    <td class="py-3 px-4">$3,500,000</td>
+                    <td class="py-3 px-4 text-green-600">+4.3%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>Key insights from the analysis:</p>
+            <ul class="list-disc pl-6 space-y-1">
+              <li>
+                Consistent quarterly growth with revenue increasing from $2.45M
+                to $3.65M
+              </li>
+              <li>
+                All quarters exceeded targets, with Q2 2023 showing the highest
+                target outperformance
+              </li>
+              <li>
+                Growth rate has stabilized around 7-8% quarter-over-quarter
+              </li>
+              <li>
+                Total revenue growth of 49% year-over-year comparing Q2 2024 to
+                Q2 2023
+              </li>
+            </ul>
+          </div>
+          <div id="message-3" class="flex justify-end">
+            <div class="bg-primary-600 text-white rounded-lg p-4 max-w-3xl">
+              <p>
+                Great analysis! Can you also show me the regional breakdown for
+                Q2 2024?
+              </p>
+            </div>
+          </div>
+          <div id="message-4" class="space-y-6 max-w-full">
+            <div class="flex items-center space-x-2">
+              <p>
+                I'll break down the Q2 2024 revenue by region. Let me query the
+                regional data:
+              </p>
+              <div class="flex items-center space-x-1">
+                <div class="tool-call-icon relative group">
+                  <i
+                    class="fa-solid fa-globe text-gray-400 hover:text-gray-600 text-sm cursor-help"
+                  ></i>
+                  <div
+                    class="tool-call-tooltip absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                  >
+                    regional_query
+                  </div>
+                </div>
+                <div class="tool-call-icon relative group">
+                  <i
+                    class="fa-solid fa-exclamation-triangle text-red-400 hover:text-red-600 text-sm cursor-help"
+                  ></i>
+                  <div
+                    class="tool-call-tooltip absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                  >
+                    cache_miss (failed)
+                  </div>
+                </div>
+                <div class="tool-call-icon relative group">
+                  <i
+                    class="fa-solid fa-chart-pie text-gray-400 hover:text-gray-600 text-sm cursor-help"
+                  ></i>
+                  <div
+                    class="tool-call-tooltip absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                  >
+                    create_pie_chart
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-start space-x-3">
+              <div
+                id="code-block-3"
+                class="inline-flex items-center bg-white border border-blue-200 rounded-lg px-3 py-2 max-w-sm"
+              >
+                <button
+                  class="status-btn w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 text-xs hover:bg-blue-200 transition-colors animate-pulse"
+                  data-status="running"
+                >
+                  <i class="fa-solid fa-play"></i>
+                </button>
+                <span class="text-sm font-medium text-gray-700 flex-1 truncate"
+                  >Query regional sales data</span
+                >
+                <button
+                  class="expand-btn ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <i class="fa-solid fa-expand text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div
+              id="code-output-3"
+              class="ml-9 bg-gray-900 text-gray-100 rounded-lg p-3 font-mono text-sm"
+            >
+              <div class="text-blue-300">
+                Connecting to regional database...
+              </div>
+              <div class="text-yellow-400">
+                ⚠ Cache miss, querying directly
+              </div>
+              <div class="text-green-400">
+                ✓ Retrieved regional data for Q2 2024
+              </div>
+            </div>
+            <div class="flex items-start space-x-3">
+              <div
+                id="code-block-4"
+                class="inline-flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2 max-w-sm"
+              >
+                <button
+                  class="status-btn w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-3 text-xs hover:bg-green-200 transition-colors"
+                  data-status="ok"
+                >
+                  <i class="fa-solid fa-check"></i>
+                </button>
+                <span class="text-sm font-medium text-gray-700 flex-1 truncate"
+                  >Calculate regional percentages</span
+                >
+                <button
+                  class="expand-btn ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <i class="fa-solid fa-expand text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div
+              id="code-output-4"
+              class="ml-9 bg-gray-900 text-gray-100 rounded-lg p-3 font-mono text-sm"
+            >
+              <div class="text-green-400">
+                ✓ Calculated percentages for 4 regions
+              </div>
+              <div class="text-gray-300">Total validation: $3,650,000</div>
+            </div>
+            <p>Here's the regional breakdown for Q2 2024 ($3.65M total):</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div
+                id="regional-chart"
+                class="h-80 bg-white p-4 rounded-lg border border-gray-200"
+              ></div>
+
+              <div class="overflow-x-auto">
+                <table
+                  id="regional-table"
+                  class="min-w-full bg-white border border-gray-200 rounded-lg"
+                >
+                  <thead>
+                    <tr class="bg-gray-50">
+                      <th
+                        class="py-3 px-4 text-left border-b border-gray-200 font-medium text-gray-700"
+                      >
+                        Region
+                      </th>
+                      <th
+                        class="py-3 px-4 text-left border-b border-gray-200 font-medium text-gray-700"
+                      >
+                        Revenue
+                      </th>
+                      <th
+                        class="py-3 px-4 text-left border-b border-gray-200 font-medium text-gray-700"
+                      >
+                        Share
+                      </th>
+                      <th
+                        class="py-3 px-4 text-left border-b border-gray-200 font-medium text-gray-700"
+                      >
+                        Growth
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td
+                        class="py-3 px-4 border-b border-gray-200 font-medium"
+                      >
+                        North America
+                      </td>
+                      <td class="py-3 px-4 border-b border-gray-200">
+                        $1,460,000
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
