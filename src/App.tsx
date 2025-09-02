@@ -35,6 +35,9 @@ function App() {
       (!currentNotebook || currentNotebook.id !== activeFile.id)
     ) {
       setCurrentNotebook(activeFile);
+    } else if (!activeFile && currentNotebook) {
+      // Clear the current notebook if there's no active file
+      setCurrentNotebook(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFile?.id, currentNotebook?.id]); // Only depend on IDs, not full objects

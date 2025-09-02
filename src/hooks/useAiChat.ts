@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { z } from 'zod';
 import { useGeminiApiKey } from './useGeminiApiKey';
@@ -54,11 +54,46 @@ export function useAiChat() {
     transport,
   });
 
+  const timeoutRef = useRef<number | null>(null);
+
+  // Add a timeout to reset stuck loading states
+  useEffect(() => {
+    if (chat.status === 'submitted' || chat.status === 'streaming') {
+      // Clear any existing timeout
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+      }
+
+      // Set a timeout to force reset if stuck (10 seconds)
+      timeoutRef.current = window.setTimeout(() => {
+        console.log('[useAiChat] Chat status stuck, attempting to reset');
+        // Force a status reset by triggering a no-op setMessages call
+        const currentMessages = chat.messages;
+        chat.setMessages([...currentMessages]);
+        timeoutRef.current = null;
+      }, 10000);
+    } else {
+      // Clear timeout if status changes to something else
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    }
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [chat]);
+
   const sendMessage = useCallback(
     async (messageText: string) => {
       console.log('[useAiChat] sendMessage', {
         hasApiKey,
         messageTextLength: messageText.length,
+        status: chat.status,
       });
       if (!hasApiKey || !apiKey) {
         alert('Please configure your Gemini API key in settings first.');
@@ -69,6 +104,17 @@ export function useAiChat() {
     [chat, hasApiKey, apiKey],
   );
 
+  // Manual reset function for stuck states
+  const resetChatStatus = useCallback(() => {
+    console.log('[useAiChat] Manual chat status reset triggered');
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    const currentMessages = chat.messages;
+    chat.setMessages([...currentMessages]);
+  }, [chat]);
+
   return {
     messages: chat.messages,
     isLoading: chat.status === 'submitted' || chat.status === 'streaming',
@@ -76,5 +122,7 @@ export function useAiChat() {
     hasApiKey,
     sendMessage,
     setMessages: chat.setMessages,
+    resetChatStatus,
+    status: chat.status, // Expose status for debugging
   };
 }

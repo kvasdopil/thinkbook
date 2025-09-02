@@ -185,7 +185,34 @@ export const useNotebookFiles = () => {
 
   const deleteFile = useCallback(
     (id: string) => {
+      const fileList = Object.values(store.files).sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+
+      // Find the index of the file being deleted
+      const currentIndex = fileList.findIndex((file) => file.id === id);
+
+      // Find the next file to select
+      let nextFileId: string | null = null;
+      if (fileList.length > 1) {
+        // If there's a file after the current one, select it
+        if (currentIndex < fileList.length - 1) {
+          nextFileId = fileList[currentIndex + 1].id;
+        }
+        // Otherwise, select the previous file (if any)
+        else if (currentIndex > 0) {
+          nextFileId = fileList[currentIndex - 1].id;
+        }
+      }
+
+      // Delete the file first
       store.deleteFile(id);
+
+      // Update the active file if the deleted file was active
+      if (store.lastActiveFileId === id) {
+        store.setLastActiveFileId(nextFileId);
+      }
     },
     [store],
   );

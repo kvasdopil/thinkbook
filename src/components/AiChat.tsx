@@ -20,6 +20,7 @@ export function AiChat({ currentNotebook }: AiChatProps) {
     cancelEditing,
     rollbackAndEdit,
     editingMessageId,
+    resetChatStatus,
   } = useNotebookChat({ currentNotebook });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -111,6 +112,7 @@ export function AiChat({ currentNotebook }: AiChatProps) {
             onSendMessage={sendMessage}
             disabled={isLoading}
             placeholder="Ask the AI assistant..."
+            onResetChat={resetChatStatus}
           />
         </div>
       </footer>

@@ -143,7 +143,29 @@ describe('useNotebookFiles', () => {
     });
 
     expect(result.current.files['notebook-1']).toBeUndefined();
-    // Should clear active file if deleted file was active
+    // Should select the next available file (notebook-2) since notebook-1 was active
+    expect(result.current.activeFileId).toBe('notebook-2');
+  });
+
+  it('should clear active file when all notebooks are deleted', async () => {
+    const { result } = renderHook(() => useNotebookFiles());
+
+    await vi.waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Delete both notebooks
+    act(() => {
+      result.current.deleteFile('notebook-1');
+    });
+
+    act(() => {
+      result.current.deleteFile('notebook-2');
+    });
+
+    expect(result.current.files['notebook-1']).toBeUndefined();
+    expect(result.current.files['notebook-2']).toBeUndefined();
+    // Should clear active file when no notebooks remain
     expect(result.current.activeFileId).toBeNull();
   });
 
