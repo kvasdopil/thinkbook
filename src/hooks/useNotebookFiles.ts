@@ -14,8 +14,8 @@ const debounce = <T extends (...args: any[]) => any>(
 ): T => {
   let timeoutId: number;
   return ((...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
+    window.clearTimeout(timeoutId);
+    timeoutId = window.setTimeout(() => func(...args), delay);
   }) as T;
 };
 

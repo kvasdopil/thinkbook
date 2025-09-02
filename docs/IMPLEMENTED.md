@@ -337,3 +337,62 @@
 - Full accessibility support with banner role, ARIA labels, proper tabIndex, and keyboard navigation
 - Maintains architectural consistency with existing component structure and testing patterns
 - All acceptance criteria from user story specification fully implemented and tested
+
+## 0013.JUPYTER_ENGINE
+
+**Status:** ✅ Complete
+
+**Summary:** Implemented a Python execution environment in the browser with syntax-highlighted Monaco Editor and Pyodide runtime in web worker for executing Python code cells.
+
+**Implementation Details:**
+
+- Created `src/components/CodeEditor.tsx` - Monaco Editor component with Python syntax highlighting, configurable height, read-only mode, and dark theme
+- Created `src/workers/pyodideWorker.ts` - Web worker implementation loading Pyodide 0.28.0 from CDN with proper message handling for init/execute/interrupt operations
+- Created `src/hooks/usePyodideWorker.ts` - React hook managing worker lifecycle with stable callback references to prevent worker recreation during re-renders
+- Created `src/components/NotebookCell.tsx` - Integrated cell component with code editor, Run/Stop buttons, execution status indicators, and output display sections
+- Updated `src/utils/monacoWorkers.ts` - Configured Monaco Editor workers for Vite bundling with proper Python language support and syntax highlighting
+- Updated `vite.config.ts` - Added Monaco Editor to optimizeDeps and manual chunk configuration for proper worker bundling
+- Integrated NotebookCell into `src/components/AiChat.tsx` - Python execution environment available on main application page
+- Pyodide loads from exact CDN URL specified (https://cdn.jsdelivr.net/pyodide/v0.28.0/full/) with proper indexURL configuration
+- Python execution isolated in web worker for performance with stdout/stderr capture and error handling
+- Worker lifecycle designed for stability during parent component re-renders using refs for callback functions
+- Output section displays both standard output (gray background) and errors (red background) with proper formatting
+- Loading indicators show "Loading Python..." during Pyodide initialization and "Running..." during code execution
+- Run button disabled when worker not ready, transforms to Stop button during execution with interrupt capability
+
+**Testing:**
+
+- Comprehensive unit tests for `usePyodideWorker.ts` covering worker initialization, message handling, output callbacks, and execution states
+- Unit tests for `NotebookCell.tsx` testing UI interactions, button states, code editing, and output display
+- Unit tests for `CodeEditor.tsx` verifying Monaco Editor integration, styling, and prop handling
+- Worker lifecycle stability tests ensuring worker persistence across parent re-renders and callback changes
+- Tests cover all acceptance criteria including syntax highlighting, execution, output display, and worker isolation
+- Mock implementations for Worker constructor, Monaco Editor, and Pyodide loading with proper cleanup
+
+**Files Created/Modified:**
+
+- `src/components/CodeEditor.tsx` - Monaco Editor component with Python language support
+- `src/components/CodeEditor.test.tsx` - Unit tests for code editor functionality
+- `src/workers/pyodideWorker.ts` - Pyodide web worker implementation with CDN loading
+- `src/hooks/usePyodideWorker.ts` - React hook for stable worker lifecycle management
+- `src/hooks/usePyodideWorker.test.ts` - Comprehensive unit tests for worker hook
+- `src/components/NotebookCell.tsx` - Integrated cell with editor, execution, and output display
+- `src/components/NotebookCell.test.tsx` - Unit tests for notebook cell interactions
+- `src/utils/monacoWorkers.ts` - Monaco worker configuration for Vite bundling
+- `src/components/AiChat.tsx` - Updated to include NotebookCell integration
+- `vite.config.ts` - Added Monaco Editor optimization and bundling configuration
+
+**Technical Notes:**
+
+- Uses Monaco Editor with custom Python language configuration including keywords, builtins, and operators
+- Pyodide worker implementation follows message-passing pattern with unique execution IDs for proper response routing
+- Worker lifecycle hook uses empty dependency array in useEffect to prevent recreation on callback changes
+- Callback functions stored in refs (`onOutputChangeRef.current`) to maintain stability during re-renders
+- Proper TypeScript interfaces for worker messages, responses, and execution results with type safety
+- Web worker bundled using Vite's `new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })` pattern
+- Monaco Editor workers configured for proper language support with `getWorker` pattern instead of `getWorkerUrl`
+- Output handling separates stdout from stderr with appropriate styling and formatting
+- Error boundaries and loading states provide proper user feedback during initialization and execution
+- ARIA accessibility features including proper button labeling and loading indicators
+- Follows established architectural patterns with proper separation of concerns between editor, worker, and UI components
+- All acceptance criteria from user story specification fully implemented including worker stability requirements

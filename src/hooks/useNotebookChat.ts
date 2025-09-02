@@ -27,7 +27,7 @@ export function useNotebookChat({ currentNotebook }: UseNotebookChatProps) {
 
       // Clear any existing transition timeout
       if (transitionTimeoutRef.current) {
-        clearTimeout(transitionTimeoutRef.current);
+        window.clearTimeout(transitionTimeoutRef.current);
       }
 
       // Always clear messages first to prevent cross-contamination
@@ -35,7 +35,7 @@ export function useNotebookChat({ currentNotebook }: UseNotebookChatProps) {
       lastSavedMessagesRef.current = '';
 
       // Use a longer delay to ensure the clear operation completes
-      transitionTimeoutRef.current = setTimeout(() => {
+      transitionTimeoutRef.current = window.setTimeout(() => {
         if (currentNotebook) {
           // Convert NotebookFile messages to the format expected by the chat
           const convertedMessages = currentNotebook.messages.map((msg) => ({
@@ -65,7 +65,7 @@ export function useNotebookChat({ currentNotebook }: UseNotebookChatProps) {
   useEffect(() => {
     return () => {
       if (transitionTimeoutRef.current) {
-        clearTimeout(transitionTimeoutRef.current);
+        window.clearTimeout(transitionTimeoutRef.current);
       }
     };
   }, []);

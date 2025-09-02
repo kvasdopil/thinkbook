@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNotebookChat } from '../hooks/useNotebookChat';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
+import { NotebookCell } from './NotebookCell';
 import type { NotebookFile } from '../types/notebook';
 
 interface AiChatProps {
@@ -38,7 +39,12 @@ export function AiChat({ currentNotebook }: AiChatProps) {
   if (!hasApiKey) {
     return (
       <div className="flex flex-col h-full p-4 flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6 max-w-7xl mx-auto">
+          {/* Jupyter Notebook Cell */}
+          <div className="w-full">
+            <NotebookCell />
+          </div>
+
           <div className="flex justify-end">
             <div className="bg-primary-600 text-white rounded-lg p-4 max-w-3xl">
               <p>
@@ -63,6 +69,11 @@ export function AiChat({ currentNotebook }: AiChatProps) {
   return (
     <div className="flex flex-col h-full items-center flex-1 overflow-hidden">
       <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl">
+        {/* Jupyter Notebook Cell */}
+        <div className="w-full">
+          <NotebookCell />
+        </div>
+
         {messages.map((message, index) => (
           <ChatMessage
             key={message.id}

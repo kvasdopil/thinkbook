@@ -9,6 +9,26 @@ export default defineConfig({
   css: {
     postcss: './postcss.config.js',
   },
+  worker: {
+    format: 'es',
+  },
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(
+      process.env.NODE_ENV || 'development',
+    ),
+  },
+  optimizeDeps: {
+    include: ['pyodide', 'monaco-editor'],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          monaco: ['monaco-editor'],
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
