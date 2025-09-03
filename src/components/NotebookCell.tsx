@@ -61,14 +61,19 @@ export const NotebookCell = forwardRef<NotebookCellHandle, NotebookCellProps>(
     const { getCodeCell, updateCode, updateExecutionResult } =
       useNotebookCodeStore();
 
-    // Get persisted code or use initialCode
+    // Get persisted code or use initialCode - subscribe to store changes
     const persistedCell =
       notebookId && cellId ? getCodeCell(notebookId, cellId) : null;
-    const [code, setCode] = useState(persistedCell?.code || initialCode);
-    const [output, setOutput] = useState<string[]>(persistedCell?.output || []);
-    const [error, setError] = useState<string | null>(
-      persistedCell?.error || null,
-    );
+
+    // Use persisted cell data directly when available, otherwise use local state
+    const [localCode, setLocalCode] = useState(initialCode);
+    const [localOutput, setLocalOutput] = useState<string[]>([]);
+    const [localError, setLocalError] = useState<string | null>(null);
+
+    // Use store data when available, fallback to local state
+    const code = persistedCell?.code ?? localCode;
+    const output = persistedCell?.output ?? localOutput;
+    const error = persistedCell?.error ?? localError;
 
     // Individual cell execution state
     const [cellExecutionState, setCellExecutionState] = useState<
@@ -78,20 +83,20 @@ export const NotebookCell = forwardRef<NotebookCellHandle, NotebookCellProps>(
     // Visibility toggle state - default to hidden per spec
     const [isEditorVisible, setIsEditorVisible] = useState(false);
 
-    // Sync with persisted state when notebookId or cellId changes
+    // Sync local state with persisted state when notebookId or cellId changes
     useEffect(() => {
       if (notebookId && cellId) {
         const cell = getCodeCell(notebookId, cellId);
-        setCode(cell.code);
-        setOutput(cell.output);
-        setError(cell.error);
+        setLocalCode(cell.code);
+        setLocalOutput(cell.output);
+        setLocalError(cell.error);
       }
     }, [notebookId, cellId, getCodeCell]);
 
     const handleOutputChange = useCallback(
       (newOutput: string[], newError: string | null) => {
-        setOutput([...newOutput]);
-        setError(newError);
+        setLocalOutput([...newOutput]);
+        setLocalError(newError);
 
         // Persist execution results if we have a notebookId and cellId
         if (notebookId && cellId) {
@@ -111,7 +116,7 @@ export const NotebookCell = forwardRef<NotebookCellHandle, NotebookCellProps>(
 
     const handleCodeChange = useCallback(
       (newCode: string) => {
-        setCode(newCode);
+        setLocalCode(newCode);
         onCodeChange?.(newCode);
 
         // Persist code if we have a notebookId and cellId
@@ -126,8 +131,8 @@ export const NotebookCell = forwardRef<NotebookCellHandle, NotebookCellProps>(
       if (!isReady || cellExecutionState === 'running' || disabled) return;
 
       // Clear previous output
-      setOutput([]);
-      setError(null);
+      setLocalOutput([]);
+      setLocalError(null);
       setCellExecutionState('running');
 
       try {
@@ -141,7 +146,7 @@ export const NotebookCell = forwardRef<NotebookCellHandle, NotebookCellProps>(
         }
       } catch (error) {
         console.error('Cell execution error:', error);
-        setError(error instanceof Error ? error.message : String(error));
+        setLocalError(error instanceof Error ? error.message : String(error));
         setCellExecutionState('failed');
       }
     }, [
