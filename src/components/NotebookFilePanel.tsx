@@ -34,13 +34,9 @@ const FileItem = ({ file, isActive, onClick, onDelete }: FileItemProps) => {
   return (
     <div
       className={`
-        group relative p-3 rounded-md cursor-pointer border transition-all
-        hover:bg-gray-50 hover:shadow-sm
-        ${
-          isActive
-            ? 'bg-blue-50 border-blue-200 shadow-sm'
-            : 'bg-white border-gray-200 hover:border-gray-300'
-        }
+        group relative p-3 rounded-md cursor-pointer transition-all
+        hover:bg-gray-50
+        ${isActive ? 'bg-blue-50 border-blue-200 border' : 'bg-white'}
       `}
       onClick={onClick}
       onMouseEnter={() => setShowDeleteButton(true)}
@@ -98,7 +94,7 @@ const FileGroup = ({
   return (
     <div className="mb-6">
       <h3 className="text-sm font-semibold text-gray-700 mb-2 px-1">{title}</h3>
-      <div className="space-y-2">
+      <div className="space-y-1">
         {files.map((file) => (
           <FileItem
             key={file.id}
@@ -164,10 +160,9 @@ export const NotebookFilePanel = ({
     <div
       className={`${isNotebookPanelCollapsed ? 'w-0' : 'w-80'} bg-white border-r border-gray-200 flex flex-col h-full transition-all duration-300 overflow-hidden`}
     >
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Notebooks</h2>
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="mb-4">
           <button
             onClick={handleNewFile}
             className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
@@ -177,10 +172,6 @@ export const NotebookFilePanel = ({
             New File
           </button>
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
         {hasFiles ? (
           <div>
             {Object.entries(groupedFiles).map(([groupTitle, files]) => (

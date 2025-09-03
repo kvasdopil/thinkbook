@@ -13,6 +13,7 @@ export interface CreateCodeCellResult {
 export async function createCodeCell(
   text: string,
   notebookId?: string,
+  creationContext?: { messageId?: string; toolCallId?: string },
 ): Promise<CreateCodeCellResult> {
   console.log('Creating new code cell with text:', text);
 
@@ -34,8 +35,8 @@ export async function createCodeCell(
       };
     }
 
-    // Add the new cell with the provided code
-    const cellId = store.addCell(targetNotebookId, text);
+    // Add the new cell with the provided code and creation context
+    const cellId = store.addCell(targetNotebookId, text, creationContext);
 
     return {
       success: true,

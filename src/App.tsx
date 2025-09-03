@@ -86,6 +86,12 @@ function App() {
     // This callback can be used for additional actions if needed
   };
 
+  // Get the last message ID from the current notebook for manual cell creation
+  const lastMessageId =
+    currentNotebook?.messages && currentNotebook.messages.length > 0
+      ? currentNotebook.messages[currentNotebook.messages.length - 1]?.id
+      : undefined;
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans">
       <main className="flex-1 flex overflow-hidden">
@@ -102,6 +108,7 @@ function App() {
             onSettingsClick={handleSettingsClick}
             onRunAll={handleRunAll}
             onAddCell={handleAddCell}
+            lastMessageId={lastMessageId}
           />
           <AiChat ref={aiChatRef} currentNotebook={currentNotebook} />
         </div>

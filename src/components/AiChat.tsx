@@ -6,6 +6,9 @@ import {
   MultipleNotebookCells,
   type MultipleNotebookCellsHandle,
 } from './MultipleNotebookCells';
+import { MessageCells } from './MessageCells';
+import { organizeMessagesAndCells } from '../utils/messagesCellsOrganizer';
+import { useNotebookCodeStore } from '../store/notebookCodeStore';
 import type { NotebookFile } from '../types/notebook';
 
 interface AiChatProps {
@@ -31,8 +34,19 @@ export const AiChat = forwardRef<AiChatHandle, AiChatProps>(
       editingMessageId,
       resetChatStatus,
     } = useNotebookChat({ currentNotebook });
+    const { getCodeCells } = useNotebookCodeStore();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const multipleNotebookCellsRef = useRef<MultipleNotebookCellsHandle>(null);
+
+    // Get cells for the current notebook
+    const notebookId = currentNotebook?.id || 'temp-notebook';
+    const cells = getCodeCells(notebookId);
+
+    // Organize messages and cells
+    const { orphanCells, messagesWithCells } = organizeMessagesAndCells(
+      messages,
+      cells,
+    );
 
     const scrollToBottom = () => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -64,14 +78,21 @@ export const AiChat = forwardRef<AiChatHandle, AiChatProps>(
     if (!hasApiKey) {
       return (
         <div className="flex flex-col h-full p-4 flex-1 overflow-hidden">
+          {/* Hidden MultipleNotebookCells for runAllCells functionality */}
+          <div className="hidden">
+            <MultipleNotebookCells
+              ref={multipleNotebookCellsRef}
+              notebookId={currentNotebook?.id}
+            />
+          </div>
+
           <div className="flex-1 overflow-y-auto space-y-6 max-w-7xl min-w-[40rem] mx-auto">
-            {/* Multiple Jupyter Notebook Cells */}
-            <div className="w-full">
-              <MultipleNotebookCells
-                ref={multipleNotebookCellsRef}
-                notebookId={currentNotebook?.id}
-              />
-            </div>
+            {/* Orphan cells (cells without corresponding messages) */}
+            {orphanCells.length > 0 && (
+              <div className="w-full">
+                <MessageCells cells={orphanCells} notebookId={notebookId} />
+              </div>
+            )}
 
             <div className="flex justify-end">
               <div className="bg-primary-600 text-white rounded-lg p-4 max-w-3xl">
@@ -96,26 +117,50 @@ export const AiChat = forwardRef<AiChatHandle, AiChatProps>(
 
     return (
       <div className="flex flex-col h-full items-center flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl min-w-[40rem]">
-          {/* Multiple Jupyter Notebook Cells */}
-          <div className="w-full">
-            <MultipleNotebookCells
-              ref={multipleNotebookCellsRef}
-              notebookId={currentNotebook?.id}
-            />
-          </div>
+        {/* Hidden MultipleNotebookCells for runAllCells functionality */}
+        <div className="hidden">
+          <MultipleNotebookCells
+            ref={multipleNotebookCellsRef}
+            notebookId={currentNotebook?.id}
+          />
+        </div>
 
-          {messages.map((message, index) => (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              messageIndex={index}
-              editingMessageIndex={editingMessageIndex}
-              onStartEdit={startEditing}
-              onCancelEdit={cancelEditing}
-              onSendEdit={rollbackAndEdit}
-            />
-          ))}
+        <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl min-w-[40rem]">
+          {/* Orphan cells (cells without corresponding messages) */}
+          {orphanCells.length > 0 && (
+            <div className="w-full">
+              <MessageCells cells={orphanCells} notebookId={notebookId} />
+            </div>
+          )}
+
+          {/* Messages with their associated cells */}
+          {messagesWithCells.map((messageWithCells, index) => {
+            const message = messageWithCells.message;
+            const cellsCreatedByThisMessage =
+              messageWithCells.cellsCreatedByThisMessage;
+
+            return (
+              <div key={message.id} className="w-full space-y-4">
+                {/* The message */}
+                <ChatMessage
+                  message={message}
+                  messageIndex={index}
+                  editingMessageIndex={editingMessageIndex}
+                  onStartEdit={startEditing}
+                  onCancelEdit={cancelEditing}
+                  onSendEdit={rollbackAndEdit}
+                />
+
+                {/* Cells created by this message */}
+                {cellsCreatedByThisMessage.length > 0 && (
+                  <MessageCells
+                    cells={cellsCreatedByThisMessage}
+                    notebookId={notebookId}
+                  />
+                )}
+              </div>
+            );
+          })}
 
           {isLoading && (
             <div className="space-y-6 max-w-full">

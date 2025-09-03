@@ -17,6 +17,7 @@ interface NotebookHeaderProps {
   toggleNotebookPanel: () => void;
   onRunAll?: () => void;
   onAddCell?: () => void;
+  lastMessageId?: string; // ID of the last message in the conversation
 }
 
 export function NotebookHeader({
@@ -27,6 +28,7 @@ export function NotebookHeader({
   toggleNotebookPanel,
   onRunAll,
   onAddCell,
+  lastMessageId,
 }: NotebookHeaderProps) {
   const [titleValue, setTitleValue] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +61,11 @@ export function NotebookHeader({
 
   const handleAddCell = () => {
     if (activeFile) {
-      addCell(activeFile.id);
+      // For manual cell creation, bind to the last message in the conversation
+      const creationContext = lastMessageId
+        ? { messageId: lastMessageId }
+        : undefined;
+      addCell(activeFile.id, undefined, creationContext);
     }
     onAddCell?.();
   };

@@ -8,6 +8,7 @@ import {
   // FaCompress,
   FaDatabase,
   FaEdit,
+  FaPlus,
 } from 'react-icons/fa';
 
 interface MessageToolCallPartProps {
@@ -65,6 +66,8 @@ export function MessageToolCallPart({
         return <FaDatabase className="text-xs" />;
       case 'updateCell':
         return <FaEdit className="text-xs" />;
+      case 'createCodeCell':
+        return <FaPlus className="text-xs" />;
       default:
         return null;
     }
@@ -76,6 +79,8 @@ export function MessageToolCallPart({
   //       return 'List Cells';
   //     case 'updateCell':
   //       return `Update Cell ${(args as { id?: string })?.id || ''}`;
+  //     case 'createCodeCell':
+  //       return 'Create Code Cell';
   //     default:
   //       return toolName;
   //   }
@@ -92,6 +97,7 @@ export function MessageToolCallPart({
             className={`flex items-center space-x-2 flex-1 min-w-0 ${getStatusColor()} hover:opacity-80 transition-opacity cursor-pointer`}
           >
             {getToolIcon()}
+            {/* <span className="text-sm font-medium">{getToolDisplayName()}</span> */}
           </div>
         </button>
       </div>

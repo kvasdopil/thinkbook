@@ -7,6 +7,9 @@ interface CodeCell {
   output: string[];
   error: string | null;
   lastExecuted?: string; // ISO timestamp
+  createdByMessageId?: string; // ID of the message that created this cell
+  createdByToolCallId?: string; // ID of the tool call that created this cell
+  createdAt?: string; // ISO timestamp when cell was created
 }
 
 interface NotebookCodeState {
@@ -22,7 +25,11 @@ interface NotebookCodeActions {
   getCodeCell: (notebookId: string, cellId?: string) => CodeCell;
 
   // Add a new cell to a notebook
-  addCell: (notebookId: string, code?: string) => string; // Returns new cell ID
+  addCell: (
+    notebookId: string,
+    code?: string,
+    creationContext?: { messageId?: string; toolCallId?: string },
+  ) => string; // Returns new cell ID
 
   // Update code for a specific cell
   updateCode: (notebookId: string, cellId: string, code: string) => void;
@@ -71,6 +78,7 @@ export const useNotebookCodeStore = create<
           code: DEFAULT_CODE,
           output: [],
           error: null,
+          createdAt: new Date().toISOString(),
         };
 
         // Store it
@@ -101,13 +109,20 @@ export const useNotebookCodeStore = create<
         return cells[0];
       },
 
-      addCell: (notebookId: string, code?: string) => {
+      addCell: (
+        notebookId: string,
+        code?: string,
+        creationContext?: { messageId?: string; toolCallId?: string },
+      ) => {
         const newCellId = generateCellId();
         const newCell: CodeCell = {
           id: newCellId,
           code: code || DEFAULT_CODE,
           output: [],
           error: null,
+          createdByMessageId: creationContext?.messageId,
+          createdByToolCallId: creationContext?.toolCallId,
+          createdAt: new Date().toISOString(),
         };
 
         set((state) => {
@@ -182,6 +197,7 @@ export const useNotebookCodeStore = create<
                     code: DEFAULT_CODE,
                     output: [],
                     error: null,
+                    createdAt: new Date().toISOString(),
                   },
                 ];
 

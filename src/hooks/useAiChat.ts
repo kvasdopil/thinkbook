@@ -36,8 +36,20 @@ export function useAiChat() {
         inputSchema: z.object({
           text: z.string().describe('The full source code for the cell'),
         }),
-        execute: async ({ text }: { text: string }) => {
-          return await createCodeCell(text);
+        execute: async (
+          { text }: { text: string },
+          context: { toolCallId?: string; messages?: unknown[] },
+        ) => {
+          // Extract current message ID from the messages array
+          const lastMessage = context.messages?.[
+            context.messages.length - 1
+          ] as { id?: string } | undefined;
+          const currentMessageId = lastMessage?.id;
+
+          return await createCodeCell(text, undefined, {
+            messageId: currentMessageId,
+            toolCallId: context.toolCallId,
+          });
         },
       },
     }),
