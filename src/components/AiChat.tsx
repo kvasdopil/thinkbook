@@ -18,6 +18,7 @@ interface AiChatProps {
 export interface AiChatHandle {
   runAllCells: () => void;
   isRunAllDisabled: () => boolean;
+  getLastMessageId: () => string | undefined;
 }
 
 export const AiChat = forwardRef<AiChatHandle, AiChatProps>(
@@ -62,8 +63,13 @@ export const AiChat = forwardRef<AiChatHandle, AiChatProps>(
         isRunAllDisabled: () => {
           return multipleNotebookCellsRef.current?.isRunAllDisabled() ?? true;
         },
+        getLastMessageId: () => {
+          return messages.length > 0
+            ? messages[messages.length - 1]?.id
+            : undefined;
+        },
       }),
-      [],
+      [messages],
     );
 
     // Find the index of the message being edited
