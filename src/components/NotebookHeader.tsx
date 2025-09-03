@@ -1,6 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { FaChevronLeft, FaChevronRight, FaCog } from 'react-icons/fa';
+import {
+  FaChevronLeft,
+  FaChevronRight,
+  FaCog,
+  FaPlay,
+  FaPlus,
+} from 'react-icons/fa';
 import type { NotebookFile } from '../types/notebook';
+import { useNotebookCodeStore } from '../store/notebookCodeStore';
 
 interface NotebookHeaderProps {
   activeFile: NotebookFile | null;
@@ -8,6 +15,8 @@ interface NotebookHeaderProps {
   onSettingsClick: () => void;
   isNotebookPanelCollapsed: boolean;
   toggleNotebookPanel: () => void;
+  onRunAll?: () => void;
+  onAddCell?: () => void;
 }
 
 export function NotebookHeader({
@@ -16,9 +25,12 @@ export function NotebookHeader({
   onSettingsClick,
   isNotebookPanelCollapsed,
   toggleNotebookPanel,
+  onRunAll,
+  onAddCell,
 }: NotebookHeaderProps) {
   const [titleValue, setTitleValue] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const { getCodeCells, addCell } = useNotebookCodeStore();
 
   // Sync local state with active file title
   useEffect(() => {
@@ -44,6 +56,21 @@ export function NotebookHeader({
   const handleTitleClick = () => {
     titleInputRef.current?.focus();
   };
+
+  const handleAddCell = () => {
+    if (activeFile) {
+      addCell(activeFile.id);
+    }
+    onAddCell?.();
+  };
+
+  const handleRunAll = () => {
+    onRunAll?.();
+  };
+
+  // Get cells for the current notebook to determine button states
+  const cells = activeFile ? getCodeCells(activeFile.id) : [];
+  const hasCells = cells.length > 0;
 
   if (!activeFile) {
     return null;
@@ -95,15 +122,42 @@ export function NotebookHeader({
         />
       </div>
 
-      <button
-        onClick={onSettingsClick}
-        className="ml-4 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
-        aria-label="Open settings"
-        title="Settings"
-        tabIndex={0}
-      >
-        <FaCog className="w-5 h-5" />
-      </button>
+      {/* Action buttons */}
+      <div className="flex items-center space-x-2 ml-4">
+        {/* Run All Button */}
+        <button
+          onClick={handleRunAll}
+          disabled={!hasCells}
+          className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+          title="Run all cells sequentially"
+          data-testid="header-run-all-button"
+        >
+          <FaPlay className="w-3 h-3" />
+          <span>Run All</span>
+        </button>
+
+        {/* Add Cell Button */}
+        <button
+          onClick={handleAddCell}
+          className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+          title="Add new cell"
+          data-testid="header-add-cell-button"
+        >
+          <FaPlus className="w-3 h-3" />
+          <span>Add Cell</span>
+        </button>
+
+        {/* Settings Button */}
+        <button
+          onClick={onSettingsClick}
+          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Open settings"
+          title="Settings"
+          tabIndex={0}
+        >
+          <FaCog className="w-5 h-5" />
+        </button>
+      </div>
     </div>
   );
 }

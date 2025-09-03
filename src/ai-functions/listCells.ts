@@ -20,6 +20,10 @@ export function setCurrentNotebookId(notebookId: string | null) {
   currentNotebookId = notebookId;
 }
 
+export function getCurrentNotebookId(): string | null {
+  return currentNotebookId;
+}
+
 export async function listCells(notebookId?: string): Promise<CellData[]> {
   // Use provided notebookId or the global one
   const targetNotebookId = notebookId || currentNotebookId;

@@ -652,3 +652,57 @@
 - Comprehensive accessibility support with ARIA labels, keyboard navigation, and screen reader compatibility
 - Follows established architectural patterns with minimal, focused changes aligned with existing codebase structure
 - All acceptance criteria from user story specification fully implemented including sequential execution, output isolation, and shared Pyodide instance
+
+## 0019.CREATE_CODE_CELL_TOOL
+
+**Status:** ✅ Complete
+
+**Summary:** Implemented AI tool `createCodeCell` allowing the AI assistant to programmatically create new code cells during conversations.
+
+**Implementation Details:**
+
+- Created `src/ai-functions/createCodeCell.ts` - New AI tool with Zod schema validation accepting `text` parameter for cell source code
+- Updated `src/ai-functions/index.ts` - Added createCodeCell exports and type definitions following established pattern
+- Updated `src/ai-functions/listCells.ts` - Added `getCurrentNotebookId()` function to expose current notebook context for all AI functions
+- Updated `src/ai-functions/updateCell.ts` - Fixed context management to use shared `getCurrentNotebookId()` from listCells module
+- Updated `src/hooks/useAiChat.ts` - Added createCodeCell tool to AI SDK tools configuration with proper Zod schema integration
+- Updated `src/prompts/system-prompt.ts` - Added requirement for descriptive comments in AI-created cells ensuring meaningful descriptions when collapsed
+- Tool returns `{ success: true }` on successful creation with cell ID in message, `{ success: false, message: "error" }` on failure
+- New cells are inserted at the end of the notebook (appended to cell list) maintaining chronological creation order
+- All newly created cells start in collapsed state by default as per existing cell behavior
+- Cell descriptions extracted from first top-level comment using existing `extractTopLevelComment()` logic
+- Full integration with existing notebook context management ensuring proper notebook targeting
+- Uses existing `store.addCell()` method from notebookCodeStore for consistent cell creation
+
+**Testing:**
+
+- Comprehensive unit tests in `src/ai-functions/createCodeCell.test.ts` covering parameter validation, notebook context handling, cell creation, and error scenarios
+- Playwright integration tests in `tests/create-code-cell-tool.spec.ts` covering end-to-end AI tool usage, cell creation workflows, collapsed state verification, and expansion behavior
+- Tests verify cells start collapsed, can be expanded, contain proper controls, and display meaningful descriptions
+- Error handling tests cover missing notebook context and store operation failures
+- Mock testing ensures proper integration with Zustand store without external dependencies
+- All tests pass with comprehensive coverage of tool functionality and user workflows
+
+**Files Created/Modified:**
+
+- `src/ai-functions/createCodeCell.ts` - New AI tool implementation with Zod validation and notebook integration
+- `src/ai-functions/createCodeCell.test.ts` - Comprehensive unit tests for createCodeCell functionality
+- `src/ai-functions/index.ts` - Added exports for createCodeCell tool and types
+- `src/ai-functions/listCells.ts` - Added getCurrentNotebookId() export for shared context management
+- `src/ai-functions/updateCell.ts` - Fixed context management to use shared getCurrentNotebookId()
+- `src/hooks/useAiChat.ts` - Added createCodeCell to AI SDK tools configuration
+- `src/prompts/system-prompt.ts` - Enhanced with descriptive comment requirement for AI-created cells
+- `tests/create-code-cell-tool.spec.ts` - Comprehensive Playwright tests for end-to-end tool usage and workflows
+
+**Technical Notes:**
+
+- Follows established AI function pattern with Zod schema validation and async function signature
+- Leverages existing cell creation infrastructure from notebookCodeStore without architectural changes
+- Maintains consistency with existing AI tools (listCells, updateCell) for parameter handling and error responses
+- Uses shared notebook context management ensuring proper integration with unified notebook environment
+- Cells created by AI maintain same functionality as user-created cells (run, toggle, delete controls)
+- Default collapsed state ensures consistent user experience across all cell creation methods
+- System prompt enhancement guides AI to include meaningful descriptions improving user experience when cells are collapsed
+- Error handling provides clear feedback for debugging and user understanding of tool execution status
+- Integration with existing conversation flow maintains natural chat experience without manual intervention
+- All acceptance criteria from user story specification fully implemented including tool availability, collapsed display, and description extraction

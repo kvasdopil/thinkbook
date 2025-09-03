@@ -26,8 +26,10 @@ export async function updateCell(
     const { useNotebookCodeStore } = await import('../store/notebookCodeStore');
     const store = useNotebookCodeStore.getState();
 
+    // Use the shared context from listCells
+    const { getCurrentNotebookId } = await import('./listCells');
+
     // For now, we need a way to determine which notebook the cell belongs to
-    // This is a limitation of the current architecture - we should improve this
     const targetNotebookId = notebookId || getCurrentNotebookId();
 
     if (!targetNotebookId) {
@@ -51,11 +53,4 @@ export async function updateCell(
       message: `Failed to update cell ${id}: ${error}`,
     };
   }
-}
-
-// Helper function to get current notebook ID
-function getCurrentNotebookId(): string | null {
-  // For now, this would need to be set by the UI components
-  // In a more robust implementation, this could come from a router context
-  return null;
 }

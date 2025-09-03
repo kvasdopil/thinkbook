@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SettingsModal } from './components/SettingsModal';
-import { AiChat } from './components/AiChat';
+import { AiChat, type AiChatHandle } from './components/AiChat';
 import { NotebookFilePanel } from './components/NotebookFilePanel';
 import { NotebookHeader } from './components/NotebookHeader';
 import { useNotebookFiles } from './hooks/useNotebookFiles';
@@ -16,6 +16,7 @@ function App() {
   );
   const { activeFile, updateFile } = useNotebookFiles();
   const { isNotebookPanelCollapsed, toggleNotebookPanel } = useUiStore();
+  const aiChatRef = useRef<AiChatHandle>(null);
 
   useEffect(() => {
     const checkInitialConfig = async () => {
@@ -76,6 +77,15 @@ function App() {
     updateFile(id, { title });
   };
 
+  const handleRunAll = () => {
+    aiChatRef.current?.runAllCells();
+  };
+
+  const handleAddCell = () => {
+    // The add cell logic is handled directly in the NotebookHeader
+    // This callback can be used for additional actions if needed
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans">
       <main className="flex-1 flex overflow-hidden">
@@ -90,8 +100,10 @@ function App() {
             activeFile={activeFile}
             onTitleUpdate={handleTitleUpdate}
             onSettingsClick={handleSettingsClick}
+            onRunAll={handleRunAll}
+            onAddCell={handleAddCell}
           />
-          <AiChat currentNotebook={currentNotebook} />
+          <AiChat ref={aiChatRef} currentNotebook={currentNotebook} />
         </div>
       </main>
 

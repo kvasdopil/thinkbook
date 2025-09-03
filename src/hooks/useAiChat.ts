@@ -3,7 +3,7 @@ import { useChat } from '@ai-sdk/react';
 import { z } from 'zod';
 import { useGeminiApiKey } from './useGeminiApiKey';
 import { SYSTEM_PROMPT } from '../prompts/system-prompt';
-import { listCells, updateCell } from '../ai-functions';
+import { listCells, updateCell, createCodeCell } from '../ai-functions';
 import { createClientChatTransport } from '../services/clientChatTransport';
 import { storage } from '../utils/storage';
 
@@ -29,6 +29,15 @@ export function useAiChat() {
         }),
         execute: async ({ id, text }: { id: string; text: string }) => {
           return await updateCell(id, text);
+        },
+      },
+      createCodeCell: {
+        description: 'Create a new code cell with the provided source code',
+        inputSchema: z.object({
+          text: z.string().describe('The full source code for the cell'),
+        }),
+        execute: async ({ text }: { text: string }) => {
+          return await createCodeCell(text);
         },
       },
     }),

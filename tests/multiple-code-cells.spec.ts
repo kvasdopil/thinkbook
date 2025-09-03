@@ -67,8 +67,8 @@ test.describe('Multiple Code Cells', () => {
 
   test('should show Run All and Add Cell buttons', async ({ page }) => {
     // Verify control buttons are present
-    await expect(page.getByTestId('run-all-button')).toBeVisible();
-    await expect(page.getByTestId('add-cell-button')).toBeVisible();
+    await expect(page.getByTestId('header-run-all-button')).toBeVisible();
+    await expect(page.getByTestId('header-add-cell-button')).toBeVisible();
 
     // Verify initial cell exists
     await expect(page.getByTestId('notebook-cell')).toBeVisible();
@@ -85,7 +85,7 @@ test.describe('Multiple Code Cells', () => {
     await closeAnyModals(page);
 
     // Click Add Cell button
-    await page.getByTestId('add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
 
     // Should now have two cells
     const newCellCount = await page.getByTestId('notebook-cell').count();
@@ -99,7 +99,7 @@ test.describe('Multiple Code Cells', () => {
     await expect(page.getByTestId('delete-cell')).toHaveCount(0);
 
     // Add a second cell
-    await page.getByTestId('add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
 
     // Now delete buttons should be visible
     await expect(page.getByTestId('delete-cell')).toHaveCount(2);
@@ -109,7 +109,7 @@ test.describe('Multiple Code Cells', () => {
     page,
   }) => {
     // Add a second cell so delete buttons appear
-    await page.getByTestId('add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
 
     // Wait for delete buttons to appear
     await expect(page.getByTestId('delete-cell')).toHaveCount(2);
@@ -127,7 +127,7 @@ test.describe('Multiple Code Cells', () => {
 
   test('should delete cell when confirmed', async ({ page }) => {
     // Add a second cell
-    await page.getByTestId('add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
     await expect(page.getByTestId('notebook-cell')).toHaveCount(2);
 
     // Click delete on first cell
@@ -145,7 +145,7 @@ test.describe('Multiple Code Cells', () => {
 
   test('should cancel deletion when cancel is clicked', async ({ page }) => {
     // Add a second cell
-    await page.getByTestId('add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
     await expect(page.getByTestId('notebook-cell')).toHaveCount(2);
 
     // Click delete on first cell
@@ -166,7 +166,7 @@ test.describe('Multiple Code Cells', () => {
   test('should disable Run All button when no cells are running', async ({
     page,
   }) => {
-    const runAllButton = page.getByTestId('run-all-button');
+    const runAllButton = page.getByTestId('header-run-all-button');
 
     // Run All button should be enabled initially
     await expect(runAllButton).toBeEnabled();
@@ -176,7 +176,7 @@ test.describe('Multiple Code Cells', () => {
     page,
   }) => {
     // Add a second cell
-    await page.getByTestId('add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
 
     // Get both cells
     const cells = page.getByTestId('notebook-cell');
@@ -191,7 +191,7 @@ test.describe('Multiple Code Cells', () => {
 
   test('should persist cell state across page reloads', async ({ page }) => {
     // Add a second cell
-    await page.getByTestId('add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
     await expect(page.getByTestId('notebook-cell')).toHaveCount(2);
 
     // Reload the page
@@ -206,9 +206,9 @@ test.describe('Multiple Code Cells', () => {
     page,
   }) => {
     // Add multiple cells
-    await page.getByTestId('add-cell-button').click();
-    await page.getByTestId('add-cell-button').click();
-    await page.getByTestId('add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
 
     // Should have 4 cells total
     await expect(page.getByTestId('notebook-cell')).toHaveCount(4);
@@ -236,7 +236,7 @@ test.describe('Multiple Code Cells', () => {
 
   test('should support keyboard navigation between cells', async ({ page }) => {
     // Add a second cell
-    await page.getByTestId('add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
 
     // Focus should be manageable between cells
     // This is a basic test - more comprehensive keyboard navigation would need specific implementation
@@ -251,9 +251,9 @@ test.describe('Multiple Code Cells', () => {
   test('should share variables between cells in same Pyodide instance', async ({
     page,
   }) => {
-    // Add two cells
-    await page.getByTestId('add-cell-button').click();
-    await page.getByTestId('add-cell-button').click();
+    // Add two cells using the header buttons
+    await page.getByTestId('header-add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
 
     // Make sure we have 3 cells total
     await expect(page.getByTestId('notebook-cell')).toHaveCount(3);
@@ -328,8 +328,8 @@ test.describe('Multiple Code Cells', () => {
     // to verify that the shared Pyodide instance works correctly for sequential execution
 
     // Add two more cells (total 3 cells)
-    await page.getByTestId('add-cell-button').click();
-    await page.getByTestId('add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
 
     // Make sure we have 3 cells total
     await expect(page.getByTestId('notebook-cell')).toHaveCount(3);
@@ -408,7 +408,7 @@ test.describe('Multiple Code Cells', () => {
 
   test('should execute all cells using Run All button', async ({ page }) => {
     // Add one more cell (total 2 cells)
-    await page.getByTestId('add-cell-button').click();
+    await page.getByTestId('header-add-cell-button').click();
 
     // Make sure we have 2 cells total
     await expect(page.getByTestId('notebook-cell')).toHaveCount(2);
@@ -439,7 +439,7 @@ test.describe('Multiple Code Cells', () => {
     await page.waitForTimeout(3000);
 
     // Click Run All button
-    const runAllButton = page.getByTestId('run-all-button');
+    const runAllButton = page.getByTestId('header-run-all-button');
     await expect(runAllButton).toBeEnabled();
     await runAllButton.click();
 

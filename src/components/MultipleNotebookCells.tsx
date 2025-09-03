@@ -1,5 +1,4 @@
-import { useState, useRef } from 'react';
-import { FaPlay, FaPlus } from 'react-icons/fa';
+import { useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import { NotebookCell, type NotebookCellHandle } from './NotebookCell';
 import { useNotebookCodeStore } from '../store/notebookCodeStore';
 import { SharedPyodideProvider } from '../contexts/SharedPyodideContext';
@@ -8,34 +7,41 @@ interface MultipleNotebookCellsProps {
   notebookId?: string;
 }
 
-export function MultipleNotebookCells({
-  notebookId,
-}: MultipleNotebookCellsProps) {
+export interface MultipleNotebookCellsHandle {
+  runAll: () => void;
+  isRunAllDisabled: () => boolean;
+}
+
+export const MultipleNotebookCells = forwardRef<
+  MultipleNotebookCellsHandle,
+  MultipleNotebookCellsProps
+>(({ notebookId }, ref) => {
   // Use provided notebookId or fallback to temp notebook
   const effectiveNotebookId = notebookId || 'temp-notebook';
 
   return (
     <SharedPyodideProvider>
-      <MultipleNotebookCellsContent notebookId={effectiveNotebookId} />
+      <MultipleNotebookCellsContent
+        ref={ref}
+        notebookId={effectiveNotebookId}
+      />
     </SharedPyodideProvider>
   );
-}
+});
 
-function MultipleNotebookCellsContent({ notebookId }: { notebookId: string }) {
-  const { getCodeCells, addCell, deleteCell } = useNotebookCodeStore();
+const MultipleNotebookCellsContent = forwardRef<
+  MultipleNotebookCellsHandle,
+  { notebookId: string }
+>(({ notebookId }, ref) => {
+  const { getCodeCells, deleteCell } = useNotebookCodeStore();
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
     null,
   );
-  const [executingCells, setExecutingCells] = useState<Set<string>>(new Set());
   const executionRefs = useRef<Record<string, NotebookCellHandle>>({});
 
   // Get cells for this notebook (notebookId is guaranteed to be defined here)
   const cells = getCodeCells(notebookId);
-
-  const handleAddCell = () => {
-    addCell(notebookId);
-  };
 
   const handleDeleteCell = (cellId: string) => {
     if (showDeleteConfirm === cellId) {
@@ -59,59 +65,28 @@ function MultipleNotebookCellsContent({ notebookId }: { notebookId: string }) {
       for (const cell of cells) {
         const cellExecution = executionRefs.current[cell.id];
         if (cellExecution) {
-          setExecutingCells((prev) => new Set([...prev, cell.id]));
-          try {
-            await cellExecution.executeCode();
-          } finally {
-            setExecutingCells((prev) => {
-              const newSet = new Set(prev);
-              newSet.delete(cell.id);
-              return newSet;
-            });
-          }
+          await cellExecution.executeCode();
         }
       }
     } catch (error) {
       console.error('Error during run all:', error);
     } finally {
       setIsRunningAll(false);
-      setExecutingCells(new Set()); // Clear any remaining executing state
     }
   };
 
-  // Check if any cell is running
-  const anyCellRunning = executingCells.size > 0;
-
-  const runAllDisabled = isRunningAll || anyCellRunning || cells.length === 0;
+  // Expose methods to parent via ref
+  useImperativeHandle(
+    ref,
+    () => ({
+      runAll: handleRunAll,
+      isRunAllDisabled: () => isRunningAll || cells.length === 0,
+    }),
+    [handleRunAll, isRunningAll, cells.length],
+  );
 
   return (
     <div className="w-full space-y-4">
-      {/* Controls */}
-      <div className="flex items-center space-x-4 mb-4">
-        {/* Run All Button */}
-        <button
-          onClick={handleRunAll}
-          disabled={runAllDisabled}
-          className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
-          title="Run all cells sequentially"
-          data-testid="run-all-button"
-        >
-          <FaPlay className="w-4 h-4" />
-          <span>Run All</span>
-        </button>
-
-        {/* Add Cell Button */}
-        <button
-          onClick={handleAddCell}
-          className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer"
-          title="Add new cell"
-          data-testid="add-cell-button"
-        >
-          <FaPlus className="w-4 h-4" />
-          <span>Add Cell</span>
-        </button>
-      </div>
-
       {/* Cells */}
       <div className="space-y-4">
         {cells.map((cell) => (
@@ -160,4 +135,4 @@ function MultipleNotebookCellsContent({ notebookId }: { notebookId: string }) {
       </div>
     </div>
   );
-}
+});

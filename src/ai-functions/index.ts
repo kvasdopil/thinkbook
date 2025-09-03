@@ -2,6 +2,7 @@ export {
   listCells,
   listCellsParameters,
   setCurrentNotebookId,
+  getCurrentNotebookId,
   type CellData,
 } from './listCells';
 export {
@@ -9,3 +10,8 @@ export {
   updateCellParameters,
   type UpdateCellResult,
 } from './updateCell';
+export {
+  createCodeCell,
+  createCodeCellParameters,
+  type CreateCodeCellResult,
+} from './createCodeCell';
