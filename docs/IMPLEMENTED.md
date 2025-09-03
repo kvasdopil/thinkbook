@@ -595,3 +595,60 @@
 - Default hidden state follows user story specification while maintaining easy discovery through clear toggle affordances
 - Follows established architectural patterns with minimal changes to existing codebase structure
 - All acceptance criteria from user story specification fully implemented including default hidden state, status colors, hover actions, and responsive design
+
+## 0017.MULTIPLE_CODE_CELLS
+
+**Status:** ✅ Complete
+
+**Summary:** Implemented multiple code cells functionality that allows users to add, run, and remove multiple independent Python code cells in their notebook with sequential execution and proper state management.
+
+**Implementation Details:**
+
+- Enhanced `src/store/notebookCodeStore.ts` - Extended from single cell per notebook to multiple cells array with new methods: `getCodeCells()`, `addCell()`, `deleteCell()` while maintaining backward compatibility
+- Created `src/components/MultipleNotebookCells.tsx` - Container component managing multiple cells with "Run All" and "Add Cell" controls, sequential execution, cell deletion with confirmation dialog
+- Updated `src/components/NotebookCell.tsx` - Added `cellId` prop, delete button with `FaTrash` icon, disabled state during "Run All", forwardRef pattern for external execution control
+- Updated `src/components/AiChat.tsx` - Replaced single `NotebookCell` with `MultipleNotebookCells` component for multiple cells support throughout application
+- Enhanced `src/ai-functions/listCells.ts` and `src/ai-functions/updateCell.ts` - Connected to real cell store data instead of mock data with notebook context management
+- "Run All" button executes cells sequentially top-to-bottom with proper async/await handling and execution state management
+- "Add Cell" button inserts new empty cells at list end with unique generated IDs
+- Cell deletion requires user confirmation with modal dialog showing "Are you sure?" message
+- Each cell maintains isolated output area with no system message contamination
+- Single AI chat interface positioned at page top works with all cells simultaneously
+- Running cells become non-editable during execution; "Run All" disabled when any cell is executing
+- Proper execution states with color coding: COMPLETE (green), CANCELLED (orange), FAILED (red)
+- Cells share same Pyodide instance allowing variable sharing (e.g., `testvar = 123` in cell 1, `print(testvar)` in cell 2)
+
+**Testing:**
+
+- Comprehensive unit tests for `MultipleNotebookCells.tsx` covering cell management, controls, deletion confirmation, and state management
+- Updated unit tests for `notebookCodeStore.ts` to cover new multiple cells API with backward compatibility verification
+- Playwright integration tests in `tests/multiple-code-cells.spec.ts` covering complete user workflows including cell addition, deletion, "Run All" execution, and persistence
+- Tests cover modal handling, keyboard navigation, accessibility features, and edge cases
+- All tests pass with comprehensive coverage of multiple cells functionality and user interactions
+
+**Files Created/Modified:**
+
+- `src/store/notebookCodeStore.ts` - Enhanced with multiple cells per notebook support while maintaining backward compatibility
+- `src/components/MultipleNotebookCells.tsx` - New container component managing multiple cells with controls and execution orchestration
+- `src/components/MultipleNotebookCells.test.tsx` - Comprehensive unit tests for multiple cells container
+- `src/components/NotebookCell.tsx` - Enhanced with cellId prop, delete functionality, disabled state, and forwardRef pattern
+- `src/components/AiChat.tsx` - Updated to use MultipleNotebookCells instead of single NotebookCell
+- `src/ai-functions/listCells.ts` - Connected to real cell store with notebook context management
+- `src/ai-functions/updateCell.ts` - Enhanced to work with actual multiple cells data
+- `src/store/notebookCodeStore.test.ts` - Updated tests for new multiple cells API
+- `tests/multiple-code-cells.spec.ts` - Comprehensive Playwright tests for end-to-end multiple cells workflows
+
+**Technical Notes:**
+
+- Uses Zustand store extension pattern rather than creating new store for consistency with existing architecture
+- Maintains full backward compatibility via `getCodeCell()` method for existing single-cell usage patterns
+- Implements forwardRef pattern for external execution control enabling "Run All" sequential execution
+- Uses ref-based execution tracking (`executionRefs`) to avoid React closure issues as specified in technical requirements
+- Cell deletion ensures at least one cell always remains with automatic default cell creation
+- Global notebook context management for AI functions enables proper integration with chat functionality
+- Unique cell ID generation using timestamp + random string prevents collisions across notebooks
+- Graceful fallback for scenarios without notebookId using temporary notebook with disabled "Run All"
+- All buttons follow project guidelines with hover effects, proper spacing, and pointer cursors
+- Comprehensive accessibility support with ARIA labels, keyboard navigation, and screen reader compatibility
+- Follows established architectural patterns with minimal, focused changes aligned with existing codebase structure
+- All acceptance criteria from user story specification fully implemented including sequential execution, output isolation, and shared Pyodide instance

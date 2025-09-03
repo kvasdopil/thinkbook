@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNotebookChat } from '../hooks/useNotebookChat';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
-import { NotebookCell } from './NotebookCell';
+import { MultipleNotebookCells } from './MultipleNotebookCells';
 import type { NotebookFile } from '../types/notebook';
 
 interface AiChatProps {
@@ -41,9 +41,9 @@ export function AiChat({ currentNotebook }: AiChatProps) {
     return (
       <div className="flex flex-col h-full p-4 flex-1 overflow-hidden">
         <div className="flex-1 overflow-y-auto space-y-6 max-w-7xl min-w-[40rem] mx-auto">
-          {/* Jupyter Notebook Cell */}
+          {/* Multiple Jupyter Notebook Cells */}
           <div className="w-full">
-            <NotebookCell notebookId={currentNotebook?.id} />
+            <MultipleNotebookCells notebookId={currentNotebook?.id} />
           </div>
 
           <div className="flex justify-end">
@@ -70,9 +70,9 @@ export function AiChat({ currentNotebook }: AiChatProps) {
   return (
     <div className="flex flex-col h-full items-center flex-1 overflow-hidden">
       <div className="flex-1 overflow-y-auto space-y-6 p-4 max-w-7xl min-w-[40rem]">
-        {/* Jupyter Notebook Cell */}
+        {/* Multiple Jupyter Notebook Cells */}
         <div className="w-full">
-          <NotebookCell notebookId={currentNotebook?.id} />
+          <MultipleNotebookCells notebookId={currentNotebook?.id} />
         </div>
 
         {messages.map((message, index) => (

@@ -3,7 +3,7 @@ import { useEditableChat } from './useEditableChat';
 import { useNotebookFiles } from './useNotebookFiles';
 import type { NotebookFile } from '../types/notebook';
 import type { AiChatMessage } from '../types/ai-chat';
-import { listCells } from '../ai-functions';
+import { listCells, setCurrentNotebookId } from '../ai-functions';
 
 interface UseNotebookChatProps {
   currentNotebook?: NotebookFile | null;
@@ -24,6 +24,9 @@ export function useNotebookChat({ currentNotebook }: UseNotebookChatProps) {
     if (currentNotebookIdRef.current !== newNotebookId) {
       setIsLoadingNotebook(true);
       currentNotebookIdRef.current = newNotebookId;
+
+      // Set the current notebook context for AI functions
+      setCurrentNotebookId(newNotebookId);
 
       // Clear any existing transition timeout
       if (transitionTimeoutRef.current) {

@@ -13,118 +13,101 @@ describe('notebookCodeStore', () => {
     clearAll();
   });
 
-  describe('getCodeCell', () => {
+  describe('getCodeCells', () => {
     it('should create default cell for new notebook', () => {
-      const { getCodeCell } = useNotebookCodeStore.getState();
+      const { getCodeCells } = useNotebookCodeStore.getState();
 
-      const cell = getCodeCell('test-notebook-1');
+      const cells = getCodeCells('test-notebook-1');
 
-      expect(cell).toEqual({
-        id: 'cell-test-notebook-1',
+      expect(cells).toHaveLength(1);
+      expect(cells[0]).toMatchObject({
         code: 'print("Hello, World!")',
         output: [],
         error: null,
       });
+      expect(cells[0].id).toMatch(/^cell-\d+-[a-z0-9]+$/);
     });
 
-    it('should return existing cell for existing notebook', () => {
-      const { getCodeCell, updateCode } = useNotebookCodeStore.getState();
+    it('should return existing cells for existing notebook', () => {
+      const { getCodeCells, updateCode } = useNotebookCodeStore.getState();
 
-      // Create cell and update it
-      getCodeCell('test-notebook-1');
-      updateCode('test-notebook-1', 'print("Modified code")');
+      // Create cells and update the first one
+      const cells = getCodeCells('test-notebook-1');
+      const firstCellId = cells[0].id;
+      updateCode('test-notebook-1', firstCellId, 'print("Modified code")');
 
-      // Get the cell again
-      const cell = getCodeCell('test-notebook-1');
+      // Get the cells again
+      const updatedCells = getCodeCells('test-notebook-1');
 
-      expect(cell.code).toBe('print("Modified code")');
+      expect(updatedCells[0].code).toBe('print("Modified code")');
     });
   });
 
   describe('updateCode', () => {
-    it('should update code for existing notebook', () => {
-      const { getCodeCell, updateCode } = useNotebookCodeStore.getState();
+    it('should update code for existing cell', () => {
+      const { getCodeCells, updateCode } = useNotebookCodeStore.getState();
 
-      // Create initial cell
-      getCodeCell('test-notebook-1');
+      // Create initial cells
+      const cells = getCodeCells('test-notebook-1');
+      const firstCellId = cells[0].id;
 
       // Update the code
-      updateCode('test-notebook-1', 'print("Updated code")');
+      updateCode('test-notebook-1', firstCellId, 'print("Updated code")');
 
       // Verify the update
-      const cell = getCodeCell('test-notebook-1');
-      expect(cell.code).toBe('print("Updated code")');
-    });
-
-    it('should create new cell if notebook does not exist', () => {
-      const { updateCode, getCodeCell } = useNotebookCodeStore.getState();
-
-      // Update code for non-existent notebook
-      updateCode('new-notebook', 'print("New code")');
-
-      // Verify cell was created with updated code
-      const cell = getCodeCell('new-notebook');
-      expect(cell.code).toBe('print("New code")');
+      const updatedCells = getCodeCells('test-notebook-1');
+      expect(updatedCells[0].code).toBe('print("Updated code")');
     });
   });
 
   describe('updateExecutionResult', () => {
-    it('should update execution results for existing notebook', () => {
-      const { getCodeCell, updateExecutionResult } =
+    it('should update execution results for existing cell', () => {
+      const { getCodeCells, updateExecutionResult } =
         useNotebookCodeStore.getState();
 
-      // Create initial cell
-      getCodeCell('test-notebook-1');
+      // Create initial cells
+      const cells = getCodeCells('test-notebook-1');
+      const firstCellId = cells[0].id;
 
       // Update execution results
       const output = ['Hello, World!'];
       const error = null;
-      updateExecutionResult('test-notebook-1', output, error);
+      updateExecutionResult('test-notebook-1', firstCellId, output, error);
 
       // Verify the update
-      const cell = getCodeCell('test-notebook-1');
-      expect(cell.output).toEqual(output);
-      expect(cell.error).toBe(error);
-      expect(cell.lastExecuted).toBeDefined();
+      const updatedCells = getCodeCells('test-notebook-1');
+      expect(updatedCells[0].output).toEqual(output);
+      expect(updatedCells[0].error).toBe(error);
+      expect(updatedCells[0].lastExecuted).toBeDefined();
     });
 
     it('should handle execution errors', () => {
-      const { getCodeCell, updateExecutionResult } =
+      const { getCodeCells, updateExecutionResult } =
         useNotebookCodeStore.getState();
 
-      // Create initial cell
-      getCodeCell('test-notebook-1');
+      // Create initial cells
+      const cells = getCodeCells('test-notebook-1');
+      const firstCellId = cells[0].id;
 
       // Update with error
       const output = ['Some output'];
       const error = 'SyntaxError: invalid syntax';
-      updateExecutionResult('test-notebook-1', output, error);
+      updateExecutionResult('test-notebook-1', firstCellId, output, error);
 
       // Verify the update
-      const cell = getCodeCell('test-notebook-1');
-      expect(cell.output).toEqual(output);
-      expect(cell.error).toBe(error);
-    });
-
-    it('should not update non-existent notebook', () => {
-      const { updateExecutionResult, codeCellsByNotebook } =
-        useNotebookCodeStore.getState();
-
-      // Try to update non-existent notebook
-      updateExecutionResult('non-existent', ['output'], null);
-
-      // Verify nothing was created
-      expect(codeCellsByNotebook['non-existent']).toBeUndefined();
+      const updatedCells = getCodeCells('test-notebook-1');
+      expect(updatedCells[0].output).toEqual(output);
+      expect(updatedCells[0].error).toBe(error);
     });
   });
 
   describe('clearNotebook', () => {
     it('should remove notebook data', () => {
-      const { getCodeCell, clearNotebook } = useNotebookCodeStore.getState();
+      const { getCodeCells, clearNotebook } = useNotebookCodeStore.getState();
 
       // Create some notebooks
-      getCodeCell('notebook-1');
-      getCodeCell('notebook-2');
+      getCodeCells('notebook-1');
+      getCodeCells('notebook-2');
 
       // Clear one notebook
       clearNotebook('notebook-1');
@@ -140,12 +123,12 @@ describe('notebookCodeStore', () => {
 
   describe('clearAll', () => {
     it('should clear all notebook data', () => {
-      const { getCodeCell, clearAll, codeCellsByNotebook } =
+      const { getCodeCells, clearAll, codeCellsByNotebook } =
         useNotebookCodeStore.getState();
 
       // Create some notebooks
-      getCodeCell('notebook-1');
-      getCodeCell('notebook-2');
+      getCodeCells('notebook-1');
+      getCodeCells('notebook-2');
 
       // Clear all
       clearAll();
@@ -155,23 +138,79 @@ describe('notebookCodeStore', () => {
     });
   });
 
+  describe('addCell', () => {
+    it('should add new cell to existing notebook', () => {
+      const { getCodeCells, addCell } = useNotebookCodeStore.getState();
+
+      // Create initial cells
+      getCodeCells('test-notebook');
+
+      // Add a new cell
+      const newCellId = addCell('test-notebook', 'print("New cell")');
+
+      // Verify the cell was added
+      const cells = getCodeCells('test-notebook');
+      expect(cells).toHaveLength(2);
+
+      const newCell = cells.find((cell) => cell.id === newCellId);
+      expect(newCell).toBeDefined();
+      expect(newCell?.code).toBe('print("New cell")');
+    });
+  });
+
+  describe('deleteCell', () => {
+    it('should delete cell from notebook', () => {
+      const { getCodeCells, addCell, deleteCell } =
+        useNotebookCodeStore.getState();
+
+      // Create notebook with multiple cells
+      const cells = getCodeCells('test-notebook');
+      const firstCellId = cells[0].id;
+      const secondCellId = addCell('test-notebook');
+
+      // Delete the first cell
+      deleteCell('test-notebook', firstCellId);
+
+      // Verify it was deleted
+      const remainingCells = getCodeCells('test-notebook');
+      expect(remainingCells).toHaveLength(1);
+      expect(remainingCells[0].id).toBe(secondCellId);
+    });
+
+    it('should maintain at least one cell when deleting last cell', () => {
+      const { getCodeCells, deleteCell } = useNotebookCodeStore.getState();
+
+      // Create notebook with one cell
+      const cells = getCodeCells('test-notebook');
+      const cellId = cells[0].id;
+
+      // Delete the only cell
+      deleteCell('test-notebook', cellId);
+
+      // Verify a new cell was created
+      const remainingCells = getCodeCells('test-notebook');
+      expect(remainingCells).toHaveLength(1);
+      expect(remainingCells[0].id).not.toBe(cellId); // New cell has different ID
+    });
+  });
+
   describe('multiple notebooks', () => {
     it('should handle multiple notebooks independently', () => {
-      const { getCodeCell, updateCode } = useNotebookCodeStore.getState();
+      const { getCodeCells, updateCode } = useNotebookCodeStore.getState();
 
       // Create and update different notebooks
-      getCodeCell('notebook-1');
-      getCodeCell('notebook-2');
+      const cells1 = getCodeCells('notebook-1');
+      const cells2 = getCodeCells('notebook-2');
 
-      updateCode('notebook-1', 'print("Notebook 1 code")');
-      updateCode('notebook-2', 'print("Notebook 2 code")');
+      updateCode('notebook-1', cells1[0].id, 'print("Notebook 1 code")');
+      updateCode('notebook-2', cells2[0].id, 'print("Notebook 2 code")');
 
       // Verify they remain independent
-      const cell1 = getCodeCell('notebook-1');
-      const cell2 = getCodeCell('notebook-2');
+      const updatedCells1 = getCodeCells('notebook-1');
+      const updatedCells2 = getCodeCells('notebook-2');
 
-      expect(cell1.code).toBe('print("Notebook 1 code")');
-      expect(cell2.code).toBe('print("Notebook 2 code")');
+      expect(updatedCells1[0].code).toBe('print("Notebook 1 code")');
+      expect(updatedCells2[0].code).toBe('print("Notebook 2 code")');
     });
   });
 });

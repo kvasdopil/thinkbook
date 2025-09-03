@@ -10,23 +10,33 @@ interface CodeCell {
 }
 
 interface NotebookCodeState {
-  // Map of notebookId -> codeCell
-  codeCellsByNotebook: Record<string, CodeCell>;
+  // Map of notebookId -> array of code cells
+  codeCellsByNotebook: Record<string, CodeCell[]>;
 }
 
 interface NotebookCodeActions {
-  // Get code cell for a notebook (creates default if doesn't exist)
-  getCodeCell: (notebookId: string) => CodeCell;
+  // Get all code cells for a notebook (creates default if doesn't exist)
+  getCodeCells: (notebookId: string) => CodeCell[];
 
-  // Update code for a notebook
-  updateCode: (notebookId: string, code: string) => void;
+  // Get a specific cell by notebook and cell ID
+  getCodeCell: (notebookId: string, cellId?: string) => CodeCell;
 
-  // Update execution results for a notebook
+  // Add a new cell to a notebook
+  addCell: (notebookId: string, code?: string) => string; // Returns new cell ID
+
+  // Update code for a specific cell
+  updateCode: (notebookId: string, cellId: string, code: string) => void;
+
+  // Update execution results for a specific cell
   updateExecutionResult: (
     notebookId: string,
+    cellId: string,
     output: string[],
     error: string | null,
   ) => void;
+
+  // Delete a cell from a notebook
+  deleteCell: (notebookId: string, cellId: string) => void;
 
   // Clear all data for a notebook
   clearNotebook: (notebookId: string) => void;
@@ -37,6 +47,9 @@ interface NotebookCodeActions {
 
 const DEFAULT_CODE = 'print("Hello, World!")';
 
+const generateCellId = () =>
+  `cell-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
 export const useNotebookCodeStore = create<
   NotebookCodeState & NotebookCodeActions
 >()(
@@ -46,15 +59,15 @@ export const useNotebookCodeStore = create<
       codeCellsByNotebook: {},
 
       // Actions
-      getCodeCell: (notebookId: string) => {
+      getCodeCells: (notebookId: string) => {
         const existing = get().codeCellsByNotebook[notebookId];
-        if (existing) {
+        if (existing && existing.length > 0) {
           return existing;
         }
 
-        // Create default cell
+        // Create default cell if no cells exist
         const defaultCell: CodeCell = {
-          id: `cell-${notebookId}`,
+          id: generateCellId(),
           code: DEFAULT_CODE,
           output: [],
           error: null,
@@ -64,29 +77,63 @@ export const useNotebookCodeStore = create<
         set((state) => ({
           codeCellsByNotebook: {
             ...state.codeCellsByNotebook,
-            [notebookId]: defaultCell,
+            [notebookId]: [defaultCell],
           },
         }));
 
-        return defaultCell;
+        return [defaultCell];
       },
 
-      updateCode: (notebookId: string, code: string) => {
+      getCodeCell: (notebookId: string, cellId?: string) => {
+        const cells = get().getCodeCells(notebookId);
+
+        if (cellId) {
+          const cell = cells.find((c) => c.id === cellId);
+          if (!cell) {
+            throw new Error(
+              `Cell ${cellId} not found in notebook ${notebookId}`,
+            );
+          }
+          return cell;
+        }
+
+        // Return first cell if no cellId specified (backward compatibility)
+        return cells[0];
+      },
+
+      addCell: (notebookId: string, code?: string) => {
+        const newCellId = generateCellId();
+        const newCell: CodeCell = {
+          id: newCellId,
+          code: code || DEFAULT_CODE,
+          output: [],
+          error: null,
+        };
+
         set((state) => {
-          const existing = state.codeCellsByNotebook[notebookId] || {
-            id: `cell-${notebookId}`,
-            code: DEFAULT_CODE,
-            output: [],
-            error: null,
+          const existingCells = state.codeCellsByNotebook[notebookId] || [];
+          return {
+            codeCellsByNotebook: {
+              ...state.codeCellsByNotebook,
+              [notebookId]: [...existingCells, newCell],
+            },
           };
+        });
+
+        return newCellId;
+      },
+
+      updateCode: (notebookId: string, cellId: string, code: string) => {
+        set((state) => {
+          const cells = state.codeCellsByNotebook[notebookId] || [];
+          const updatedCells = cells.map((cell) =>
+            cell.id === cellId ? { ...cell, code } : cell,
+          );
 
           return {
             codeCellsByNotebook: {
               ...state.codeCellsByNotebook,
-              [notebookId]: {
-                ...existing,
-                code,
-              },
+              [notebookId]: updatedCells,
             },
           };
         });
@@ -94,22 +141,54 @@ export const useNotebookCodeStore = create<
 
       updateExecutionResult: (
         notebookId: string,
+        cellId: string,
         output: string[],
         error: string | null,
       ) => {
         set((state) => {
-          const existing = state.codeCellsByNotebook[notebookId];
-          if (!existing) return state;
+          const cells = state.codeCellsByNotebook[notebookId] || [];
+          const updatedCells = cells.map((cell) =>
+            cell.id === cellId
+              ? {
+                  ...cell,
+                  output,
+                  error,
+                  lastExecuted: new Date().toISOString(),
+                }
+              : cell,
+          );
 
           return {
             codeCellsByNotebook: {
               ...state.codeCellsByNotebook,
-              [notebookId]: {
-                ...existing,
-                output,
-                error,
-                lastExecuted: new Date().toISOString(),
-              },
+              [notebookId]: updatedCells,
+            },
+          };
+        });
+      },
+
+      deleteCell: (notebookId: string, cellId: string) => {
+        set((state) => {
+          const cells = state.codeCellsByNotebook[notebookId] || [];
+          const filteredCells = cells.filter((cell) => cell.id !== cellId);
+
+          // Ensure at least one cell remains
+          const finalCells =
+            filteredCells.length > 0
+              ? filteredCells
+              : [
+                  {
+                    id: generateCellId(),
+                    code: DEFAULT_CODE,
+                    output: [],
+                    error: null,
+                  },
+                ];
+
+          return {
+            codeCellsByNotebook: {
+              ...state.codeCellsByNotebook,
+              [notebookId]: finalCells,
             },
           };
         });
@@ -137,18 +216,37 @@ export const useNotebookCodeStore = create<
       partialize: (state) => ({
         codeCellsByNotebook: Object.fromEntries(
           Object.entries(state.codeCellsByNotebook).map(
-            ([notebookId, cell]) => [
-              notebookId,
-              {
-                ...cell,
-                output: [], // Don't persist output
-                error: null, // Don't persist errors
-                lastExecuted: undefined, // Don't persist execution timestamp
-              },
-            ],
+            ([notebookId, cells]) => {
+              // Handle migration from old single-cell format to new array format
+              const cellsArray = Array.isArray(cells) ? cells : [cells];
+              return [
+                notebookId,
+                cellsArray.map((cell) => ({
+                  ...cell,
+                  output: [], // Don't persist output
+                  error: null, // Don't persist errors
+                  lastExecuted: undefined, // Don't persist execution timestamp
+                })),
+              ];
+            },
           ),
         ),
       }),
+      // Handle migration from old single-cell format when rehydrating
+      onRehydrateStorage: () => (state) => {
+        if (state?.codeCellsByNotebook) {
+          // Migrate any single cells to arrays
+          const migratedCells = Object.fromEntries(
+            Object.entries(state.codeCellsByNotebook).map(
+              ([notebookId, cells]) => [
+                notebookId,
+                Array.isArray(cells) ? cells : [cells],
+              ],
+            ),
+          );
+          state.codeCellsByNotebook = migratedCells;
+        }
+      },
     },
   ),
 );

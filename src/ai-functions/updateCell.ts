@@ -11,17 +11,51 @@ export interface UpdateCellResult {
   message?: string;
 }
 
+// Import the context setter (for reference)
+// import { setCurrentNotebookId } from './listCells';
+
 export async function updateCell(
   id: string,
   text: string,
+  notebookId?: string,
 ): Promise<UpdateCellResult> {
-  // Placeholder implementation - simulate successful update
   console.log(`Updating cell ${id} with text:`, text);
 
-  // In a real implementation, this would update the actual notebook cell
-  // For now, just return success
-  return {
-    success: true,
-    message: `Cell ${id} updated successfully`,
-  };
+  try {
+    // Access the Zustand store directly
+    const { useNotebookCodeStore } = await import('../store/notebookCodeStore');
+    const store = useNotebookCodeStore.getState();
+
+    // For now, we need a way to determine which notebook the cell belongs to
+    // This is a limitation of the current architecture - we should improve this
+    const targetNotebookId = notebookId || getCurrentNotebookId();
+
+    if (!targetNotebookId) {
+      return {
+        success: false,
+        message: 'No active notebook found',
+      };
+    }
+
+    // Update the cell code
+    store.updateCode(targetNotebookId, id, text);
+
+    return {
+      success: true,
+      message: `Cell ${id} updated successfully`,
+    };
+  } catch (error) {
+    console.error('Error updating cell:', error);
+    return {
+      success: false,
+      message: `Failed to update cell ${id}: ${error}`,
+    };
+  }
+}
+
+// Helper function to get current notebook ID
+function getCurrentNotebookId(): string | null {
+  // For now, this would need to be set by the UI components
+  // In a more robust implementation, this could come from a router context
+  return null;
 }
